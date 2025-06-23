@@ -8,8 +8,6 @@ venv/
 docker-compose.yml
 Dockerfile.dev
 
-pyproject.toml
-
 *.json
 
 data
