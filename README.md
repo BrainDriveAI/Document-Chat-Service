@@ -3,7 +3,7 @@
 ```
 chat-with-docs/
 ├── README.md
-├── pyproject.toml                    # Poetry dependency management
+├── pyproject.toml                   # Poetry dependency management
 ├── docker-compose.yml               # Easy setup with Ollama + Chroma
 ├── Dockerfile
 ├── .env.example
@@ -168,17 +168,17 @@ chat-with-docs/
 
 ## Technology Stack Summary
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Web Framework** | FastAPI | API endpoints, WebSocket support |
-| **Document Processing** | spaCy Layout | PDF/Word structure extraction |
-| **Embeddings** | mxbai-embed-large (Ollama) | Vector representations |
-| **Vector Store** | Chroma | Document search and storage |
-| **LLM** | llama3.2:3b/8b (Ollama) | Chat responses |
-| **Orchestration** | LangGraph | RAG pipeline management |
-| **Database** | SQLite | Metadata and collections |
-| **Frontend** | HTML/JS | Simple chat interface |
-| **Container** | Docker + Docker Compose | Easy deployment |
+| Component               | Technology                 | Purpose                          |
+|-------------------------|----------------------------|----------------------------------|
+| **Web Framework**       | FastAPI                    | API endpoints, WebSocket support |
+| **Document Processing** | spaCy Layout               | PDF/Word structure extraction    |
+| **Embeddings**          | mxbai-embed-large (Ollama) | Vector representations           |
+| **Vector Store**        | Chroma                     | Document search and storage      |
+| **LLM**                 | llama3.2:3b/8b (Ollama)    | Chat responses                   |
+| **Orchestration**       | LangGraph                  | RAG pipeline management          |
+| **Database**            | SQLite                     | Metadata and collections         |
+| **Frontend**            | HTML/JS                    | Simple chat interface            |
+| **Container**           | Docker + Docker Compose    | Easy deployment                  |
 
 ## Next Steps
 1. Set up core domain entities and ports

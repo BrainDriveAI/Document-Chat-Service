@@ -1,0 +1,840 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Chat with Your Documents{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <!-- Dashboard Header -->
+    <div class="px-4 py-6 sm:px-0">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+                <p class="mt-1 text-sm text-gray-600">Manage your document collections and start chatting with your documents</p>
+            </div>
+            <button id="create-collection-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                New Collection
+            </button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="folder" class="h-8 w-8 text-gray-400"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Collections</dt>
+                                <dd class="text-lg font-medium text-gray-900" id="collections-count">0</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="file-text" class="h-8 w-8 text-gray-400"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Documents</dt>
+                                <dd class="text-lg font-medium text-gray-900" id="documents-count">0</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="message-circle" class="h-8 w-8 text-gray-400"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Chat Sessions</dt>
+                                <dd class="text-lg font-medium text-gray-900" id="chat-sessions-count">0</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collections Grid -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-md">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Your Collections</h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Organize your documents into collections for better management</p>
+            </div>
+
+            <div id="collections-container" class="min-h-64">
+                <!-- Collections will be loaded here -->
+                <div id="collections-loading" class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-500">Loading collections...</span>
+                </div>
+
+                <div id="collections-empty" class="hidden text-center py-12">
+                    <i data-lucide="folder-plus" class="mx-auto h-12 w-12 text-gray-400"></i>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No collections</h3>
+                    <p class="mt-1 text-sm text-gray-500">Get started by creating a new collection.</p>
+                    <div class="mt-6">
+                        <button id="create-first-collection-btn" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                            New Collection
+                        </button>
+                    </div>
+                </div>
+
+                <ul id="collections-list" class="hidden divide-y divide-gray-200">
+                    <!-- Collections will be inserted here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Collection Modal -->
+<div id="create-collection-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Create New Collection</h3>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+
+            <form id="create-collection-form" class="space-y-4">
+                <div>
+                    <label for="collection-name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="collection-name" name="name" required
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border">
+                </div>
+
+                <div>
+                    <label for="collection-description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="collection-description" name="description" rows="3"
+                              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border"></textarea>
+                </div>
+
+                <div>
+                    <label for="collection-color" class="block text-sm font-medium text-gray-700">Color</label>
+                    <div class="mt-1 flex space-x-2">
+                        <input type="color" id="collection-color" name="color" value="#3B82F6"
+                               class="h-8 w-16 border border-gray-300 rounded cursor-pointer">
+                        <input type="text" id="collection-color-text" value="#3B82F6"
+                               class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancel-create-btn"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                        Create Collection
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Collection Detail Modal -->
+<div id="collection-detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-10 mx-auto p-5 border max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <div id="collection-color-indicator" class="w-4 h-4 rounded-full mr-3"></div>
+                <div>
+                    <h3 id="collection-detail-name" class="text-xl font-medium text-gray-900"></h3>
+                    <p id="collection-detail-description" class="text-sm text-gray-500"></p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button id="upload-document-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700">
+                    <i data-lucide="upload" class="h-3 w-3 mr-1"></i>
+                    Upload
+                </button>
+                <button id="start-chat-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                    <i data-lucide="message-circle" class="h-3 w-3 mr-1"></i>
+                    Chat
+                </button>
+                <button id="close-detail-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Document Upload Area -->
+        <div id="upload-area" class="hidden mb-6 border-2 border-dashed border-gray-300 rounded-lg p-6 drop-zone">
+            <div class="text-center">
+                <i data-lucide="upload-cloud" class="mx-auto h-12 w-12 text-gray-400"></i>
+                <div class="mt-4">
+                    <label for="file-upload" class="cursor-pointer">
+                        <span class="mt-2 block text-sm font-medium text-gray-900">
+                            Drop files here or click to upload
+                        </span>
+                        <input id="file-upload" name="file-upload" type="file" class="sr-only" accept=".pdf,.doc,.docx,.txt">
+                    </label>
+                    <p class="mt-2 text-xs text-gray-500">PDF, DOC, DOCX, TXT up to 10MB each</p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Documents List -->
+        <div id="documents-container" class="flex flex-col h-full">
+            <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                <h4 class="text-lg font-medium text-gray-900">Documents</h4>
+                <span id="document-count-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    0 documents
+                </span>
+            </div>
+
+            <!-- Scrollable container for the documents -->
+            <div class="flex-1 overflow-auto">
+                <div id="documents-loading" class="hidden flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-500">Loading documents...</span>
+                </div>
+                <div id="documents-empty" class="hidden text-center py-12 text-gray-500">
+                    <i data-lucide="file-text" class="mx-auto h-12 w-12 text-gray-400 mb-3"></i>
+                    <p class="text-sm">No documents in this collection</p>
+                    <p class="text-xs mt-1">Upload some documents to get started</p>
+                </div>
+                <div id="documents-list" class="space-y-3 overflow-y-auto max-h-full pr-2">
+                    <!-- Documents will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    class Dashboard {
+        constructor() {
+            this.collections = [];
+            this.allDocuments = [];
+            this.allChatSessions = [];
+            this.currentCollection = null;
+            this.currentCollectionDocuments = [];
+            this.init();
+        }
+
+        init() {
+            this.bindEvents();
+            this.loadCollections();
+            this.loadDocuments();
+            this.loadChatSessions();
+            this.loadStats();
+        }
+
+        bindEvents() {
+            // Create collection modal
+            document.getElementById('create-collection-btn').addEventListener('click', () => this.showCreateModal());
+            document.getElementById('create-first-collection-btn').addEventListener('click', () => this.showCreateModal());
+            document.getElementById('close-modal-btn').addEventListener('click', () => this.hideCreateModal());
+            document.getElementById('cancel-create-btn').addEventListener('click', () => this.hideCreateModal());
+
+            // Collection detail modal
+            document.getElementById('close-detail-modal-btn').addEventListener('click', () => this.hideDetailModal());
+            document.getElementById('upload-document-btn').addEventListener('click', () => this.toggleUploadArea());
+            document.getElementById('start-chat-btn').addEventListener('click', () => this.startChat());
+
+            // Form submission
+            document.getElementById('create-collection-form').addEventListener('submit', (e) => this.createCollection(e));
+
+            // Color picker sync
+            const colorPicker = document.getElementById('collection-color');
+            const colorText = document.getElementById('collection-color-text');
+            colorPicker.addEventListener('change', () => colorText.value = colorPicker.value);
+            colorText.addEventListener('change', () => colorPicker.value = colorText.value);
+
+            // File upload
+            const fileInput = document.getElementById('file-upload');
+            const dropZone = document.querySelector('.drop-zone');
+
+            fileInput.addEventListener('change', (e) => this.handleFileUpload(e.target.files));
+
+            // Drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, this.preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => this.handleFileUpload(e.dataTransfer.files), false);
+        }
+
+        preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        async loadCollections() {
+            try {
+                this.collections = await utils.apiRequest('/collections/');
+                this.renderCollections();
+                this.updateStats();
+            } catch (error) {
+                console.error('Failed to load collections:', error);
+            }
+        }
+
+        async loadDocuments() {
+            try {
+                this.allDocuments = await utils.apiRequest('/documents/');
+                this.updateStats();
+            } catch (error) {
+                console.error('Failed to load all documents:', error);
+            }
+        }
+
+        async loadChatSessions() {
+            try {
+                this.allChatSessions = await utils.apiRequest('/chat/sessions/');
+                this.updateStats();
+            } catch (error) {
+                console.error('Failed to load all documents:', error);
+            }
+        }
+
+        async loadStats() {
+            // Update stats - you might want to add dedicated endpoints for this
+            document.getElementById('collections-count').textContent = this.collections.length.toString();
+            document.getElementById('documents-count').textContent = this.allDocuments.length.toString();
+            document.getElementById('chat-sessions-count').textContent = this.allChatSessions.length.toString();
+        }
+
+        updateStats() {
+            document.getElementById('collections-count').textContent = this.collections.length.toString();
+            document.getElementById('documents-count').textContent = this.allDocuments.length.toString();
+            document.getElementById('chat-sessions-count').textContent = this.allChatSessions.length.toString();
+        }
+
+        renderCollections() {
+            const loading = document.getElementById('collections-loading');
+            const empty = document.getElementById('collections-empty');
+            const list = document.getElementById('collections-list');
+
+            loading.classList.add('hidden');
+
+            if (this.collections.length === 0) {
+                empty.classList.remove('hidden');
+                list.classList.add('hidden');
+            } else {
+                empty.classList.add('hidden');
+                list.classList.remove('hidden');
+
+                list.innerHTML = this.collections.map(collection => `
+                    <li class="cursor-pointer hover:bg-gray-50" onclick="dashboard.showCollectionDetail('${collection.id}')">
+                        <div class="px-4 py-4 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full mr-3" style="background-color: ${collection.color}"></div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">${collection.name}</p>
+                                    <p class="text-sm text-gray-500">${collection.description || 'No description'}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-gray-500">${utils.formatDate(collection.created_at)}</span>
+                                <i data-lucide="chevron-right" class="h-4 w-4 text-gray-400"></i>
+                            </div>
+                        </div>
+                    </li>
+                `).join('');
+
+                lucide.createIcons();
+            }
+        }
+
+        showCreateModal() {
+            document.getElementById('create-collection-modal').classList.remove('hidden');
+        }
+
+        hideCreateModal() {
+            document.getElementById('create-collection-modal').classList.add('hidden');
+            document.getElementById('create-collection-form').reset();
+        }
+
+        async createCollection(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                color: formData.get('color')
+            };
+
+            try {
+                utils.showLoading();
+                const collection = await utils.apiRequest('/collections/', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                this.collections.unshift(collection);
+                this.renderCollections();
+                this.updateStats();
+                this.hideCreateModal();
+
+                utils.showToast('Collection created successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to create collection:', error);
+            } finally {
+                utils.hideLoading();
+            }
+        }
+
+        showCollectionDetail(collectionId) {
+            this.currentCollection = this.collections.find(c => c.id === collectionId);
+            if (!this.currentCollection) return;
+
+            // Update modal content
+            document.getElementById('collection-detail-name').textContent = this.currentCollection.name;
+            document.getElementById('collection-detail-description').textContent = this.currentCollection.description || 'No description';
+            document.getElementById('collection-color-indicator').style.backgroundColor = this.currentCollection.color;
+
+            // Show modal
+            document.getElementById('collection-detail-modal').classList.remove('hidden');
+
+            // Load documents for this collection
+            this.loadCollectionDocuments(collectionId);
+        }
+
+        hideDetailModal() {
+            document.getElementById('collection-detail-modal').classList.add('hidden');
+            document.getElementById('upload-area').classList.add('hidden');
+            this.currentCollection = null;
+        }
+
+        toggleUploadArea() {
+            const uploadArea = document.getElementById('upload-area');
+            uploadArea.classList.toggle('hidden');
+        }
+
+        async handleFileUpload(files) {
+            if (!this.currentCollection || files.length === 0) return;
+
+            for (const file of files) {
+                if (file.size > 10 * 1024 * 1024) {
+                    utils.showToast(`File ${file.name} is too large (max 10MB)`, 'error');
+                    continue;
+                }
+
+                // 1. Immediately create a local placeholder object
+                const tempId = 'temp-' + Math.random().toString(36).substring(2, 9);
+                const placeholderDoc = {
+                    id: tempId,
+                    filename: '', // not used
+                    original_filename: file.name,
+                    file_path: '',
+                    file_size: file.size,
+                    document_type: file.name.split('.').pop().toLowerCase(),
+                    collection_id: this.currentCollection.id,
+                    status: 'processing',
+                    created_at: new Date().toISOString(),
+                    processed_at: null,
+                    metadata: {},
+                    chunk_count: 0,
+                    isPlaceholder: true  // custom flag
+                };
+                // Add to local list and re-render
+                this.currentCollectionDocuments.unshift(placeholderDoc);
+                this.renderDocuments(this.currentCollectionDocuments);
+                this.updateStats();
+
+                // 2. Prepare formData
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('collection_id', this.currentCollection.id);
+
+                try {
+                    utils.showLoading();
+                    const response = await fetch('/documents/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Upload failed: ${response.statusText}`);
+                    }
+
+                    const document = await response.json();
+                    utils.showToast(`${file.name} uploaded successfully!`, 'success');
+
+                    // 3. Replace placeholder with actual entry with returned ID & status
+                    // Find index of placeholder
+                    const idx = this.currentCollectionDocuments.findIndex(d => d.id === tempId);
+                    if (idx !== -1) {
+                        // Replace fields
+                        this.currentCollectionDocuments[idx] = {
+                            ...document,
+                            isPlaceholder: false
+                        };
+                    } else {
+                        // Unlikely, but if not found, just add
+                        this.currentCollectionDocuments.unshift({ ...doc, isPlaceholder: false });
+                    }
+                    this.renderDocuments(this.currentCollectionDocuments);
+                    this.updateStats();
+
+                    // 4. Start polling the real document status until processed/failed
+                    this.pollDocumentStatus(document.id);
+
+                    // Refresh documents list
+                    // this.loadCollectionDocuments();
+
+                } catch (error) {
+                    console.error(`Failed to upload ${file.name}:`, error);
+                    utils.showToast(`Failed to upload ${file.name}`, 'error');
+                    // Remove placeholder
+                    this.currentCollectionDocuments = this.currentCollectionDocuments.filter(d => d.id !== tempId);
+                    this.renderDocuments(this.currentCollectionDocuments);
+                    this.updateStats();
+                } finally {
+                    utils.hideLoading();
+                }
+            }
+
+            // Clear file input
+            document.getElementById('file-upload').value = '';
+        }
+
+        pollDocumentStatus(documentId) {
+            const pollInterval = 2000; // 2s; adjust as needed
+            const maxAttempts = 60; // e.g., stop after 2 minutes if still processing
+            let attempts = 0;
+            const intervalId = setInterval(async () => {
+                attempts++;
+                try {
+                    const response = await fetch(`/documents/${documentId}`);
+                    if (!response.ok) {
+                        console.warn(`Polling document ${documentId} failed: ${response.status}`);
+                        if (response.status === 404) {
+                            // Document not found? Stop polling.
+                            clearInterval(intervalId);
+                        }
+                        return;
+                    }
+                    const updated = await response.json();
+                    // Find in local list and update
+                    const idx = this.currentCollectionDocuments.findIndex(d => d.id === documentId);
+                    if (idx !== -1) {
+                        const prevStatus = this.currentCollectionDocuments[idx].status;
+                        this.currentCollectionDocuments[idx] = {
+                            ...updated,
+                            isPlaceholder: false
+                        };
+                        // Only re-render if status changed or other fields updated
+                        if (updated.status !== prevStatus) {
+                            this.renderDocuments(this.currentCollectionDocuments);
+                            this.updateStats();
+                            if (updated.status === 'processed') {
+                                utils.showToast(`Document "${updated.original_filename}" processed and ready.`, 'success');
+                            } else if (updated.status === 'failed') {
+                                utils.showToast(`Document "${updated.original_filename}" processing failed.`, 'error');
+                            }
+                        }
+                    } else {
+                        // If not in list (e.g., user navigated away), optionally stop polling
+                        clearInterval(intervalId);
+                        return;
+                    }
+                    if (updated.status !== 'processing' && updated.status !== 'uploaded') {
+                        // Done (processed or failed)
+                        clearInterval(intervalId);
+                    }
+                } catch (e) {
+                    console.error(`Error polling document status: ${e}`);
+                    // Optionally stop after too many errors
+                }
+                if (attempts >= maxAttempts) {
+                    clearInterval(intervalId);
+                    console.warn(`Stopped polling status for document ${documentId} after ${attempts} attempts.`);
+                }
+            }, pollInterval);
+        }
+
+        async loadCollectionDocumentsDev(collectionId) {
+            // This would require a new endpoint to get documents by collection
+            // For now, we'll show a placeholder
+            const container = document.getElementById('documents-list');
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i data-lucide="file-text" class="mx-auto h-8 w-8 mb-2"></i>
+                    <p>Document list will be implemented with a new API endpoint</p>
+                </div>
+            `;
+            lucide.createIcons();
+            try {
+                utils.showLoading();
+                const collection = await utils.apiRequest('/documents?collection_id=', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                this.collections.unshift(collection);
+                this.renderCollections();
+                this.updateStats();
+                this.hideCreateModal();
+
+                utils.showToast('Collection created successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to create collection:', error);
+            } finally {
+                utils.hideLoading();
+            }
+        }
+
+        async loadCollectionDocuments(collectionId) {
+            const documentsLoading = document.getElementById('documents-loading');
+            const documentsEmpty = document.getElementById('documents-empty');
+            const documentsList = document.getElementById('documents-list');
+            const documentCountBadge = document.getElementById('document-count-badge');
+
+            // Show loading state
+            documentsLoading.classList.remove('hidden');
+            documentsEmpty.classList.add('hidden');
+            documentsList.innerHTML = '';
+
+            try {
+                const documents = await utils.apiRequest(`/documents?collection_id=${collectionId}`);
+                this.currentCollectionDocuments = documents;
+
+                // Hide loading state
+                documentsLoading.classList.add('hidden');
+
+                // Update document count
+                documentCountBadge.textContent = `${documents.length} document${documents.length !== 1 ? 's' : ''}`;
+
+                if (documents.length === 0) {
+                    documentsEmpty.classList.remove('hidden');
+                } else {
+                    documentsEmpty.classList.add('hidden');
+                    this.renderDocuments(documents);
+                }
+            } catch (error) {
+                console.error('Failed to load collection documents:', error);
+                documentsLoading.classList.add('hidden');
+                documentsList.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i data-lucide="alert-circle" class="mx-auto h-8 w-8 mb-2"></i>
+                        <p class="text-sm">Failed to load documents</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        renderDocuments(documents) {
+            const documentsList = document.getElementById('documents-list');
+
+            documentsList.innerHTML = documents.map((doc) => {
+                const statusColor = this.getStatusColor(doc.status);
+                const fileIcon = this.getFileIcon(doc.document_type);
+                const fileSize = this.formatFileSize(doc.file_size);
+                const processedDate = doc.processed_at ? utils.formatDate(doc.processed_at) : 'Processing...';
+
+                // Show spinner icon or status badge
+                let statusHtml = '';
+                if (doc.status === 'processing' || doc.status === 'uploaded') {
+                    // Indeterminate spinner next to status
+                    statusHtml = `
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <svg class="animate-spin -ml-0.5 mr-1 h-4 w-4 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        processing
+                      </span>`;
+                } else if (doc.status === 'processed') {
+                    statusHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">processed</span>`;
+                } else if (doc.status === 'failed') {
+                    statusHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">failed</span>`;
+                } else {
+                    // Fallback
+                    statusHtml = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">${doc.status}</span>`;
+                }
+
+                return `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-3 flex-1">
+                                <div class="flex-shrink-0">
+                                    <i data-lucide="${fileIcon}" class="h-8 w-8 text-gray-400"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h5 class="text-sm font-medium text-gray-900 truncate">
+                                        ${doc.original_filename}
+                                    </h5>
+                                    <div class="mt-1 flex items-center space-x-4 text-xs text-gray-500">
+                                        <span>${fileSize}</span>
+                                        <span>${doc.document_type.toUpperCase()}</span>
+                                        ${doc.chunk_count ? `<span>${doc.chunk_count} chunks</span>` : ''}
+                                    </div>
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        <span>Uploaded: ${utils.formatDate(doc.created_at)}</span>
+                                        ${doc.processed_at ? `<span class="ml-4">Processed: ${processedDate}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}">
+                                    ${statusHtml}
+                                </span>
+                                <div class="flex space-x-1">
+                                    <button onclick="dashboard.downloadDocument('${doc.id}')"
+                                            class="p-1 text-gray-400 hover:text-gray-600" title="Download">
+                                        <i data-lucide="download" class="h-4 w-4"></i>
+                                    </button>
+                                    <button onclick="dashboard.deleteDocument('${doc.id}')"
+                                            class="p-1 text-gray-400 hover:text-red-600" title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 hidden">
+                                ${statusHtml}
+                                <div class="flex space-x-1">
+                                    ${doc.status === 'processed' ? `
+                                    <button onclick="dashboard.downloadDocument('${doc.id}')" class="p-1 text-gray-400 hover:text-gray-600" title="Download">
+                                        <i data-lucide="download" class="h-4 w-4"></i>
+                                    </button>` : ''}
+                                    <button onclick="dashboard.deleteDocument('${doc.id}')" class="p-1 text-gray-400 hover:text-red-600" title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        getStatusColor(status) {
+            switch (status) {
+                case 'processed':
+                    return 'bg-green-100 text-green-800';
+                case 'processing':
+                    return 'bg-yellow-100 text-yellow-800';
+                case 'failed':
+                    return 'bg-red-100 text-red-800';
+                case 'pending':
+                    return 'bg-gray-100 text-gray-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        getFileIcon(documentType) {
+            switch (documentType.toLowerCase()) {
+                case 'pdf':
+                    return 'file-text';
+                case 'doc':
+                case 'docx':
+                    return 'file-text';
+                case 'txt':
+                    return 'file-text';
+                default:
+                    return 'file';
+            }
+        }
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async downloadDocument(documentId) {
+            try {
+                const response = await fetch(`/documents/${documentId}/download`);
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+                // Handle download - this depends on your backend implementation
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                // You might want to get the filename from response headers
+                a.download = 'document';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Failed to download document:', error);
+                utils.showToast('Failed to download document', 'error');
+            }
+        }
+
+        async deleteDocument(documentId) {
+            if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                utils.showLoading();
+                await utils.apiRequest(`/documents/${documentId}`, {
+                    method: 'DELETE'
+                });
+
+                // Remove document from current list and re-render
+                this.currentCollectionDocuments = this.currentCollectionDocuments.filter(doc => doc.id !== documentId);
+                this.renderDocuments(this.currentCollectionDocuments);
+
+                // Update document count
+                const documentCountBadge = document.getElementById('document-count-badge');
+                documentCountBadge.textContent = `${this.currentCollectionDocuments.length} document${this.currentCollectionDocuments.length !== 1 ? 's' : ''}`;
+
+                // Show empty state if no documents left
+                if (this.currentCollectionDocuments.length === 0) {
+                    document.getElementById('documents-empty').classList.remove('hidden');
+                }
+
+                utils.showToast('Document deleted successfully', 'success');
+            } catch (error) {
+                console.error('Failed to delete document:', error);
+                utils.showToast('Failed to delete document', 'error');
+            } finally {
+                utils.hideLoading();
+            }
+        }
+
+        startChat() {
+            if (!this.currentCollection) return;
+            window.location.href = `/chat?collection_id=${this.currentCollection.id}`;
+        }
+    }
+
+    // Initialize dashboard
+    const dashboard = new Dashboard();
+</script>
+{% endblock %}

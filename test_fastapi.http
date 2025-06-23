@@ -1,0 +1,119 @@
+### Health check
+GET http://localhost:8000/health/
+Accept: application/json
+
+### Metrics check
+GET http://localhost:8000/metrics
+Accept: application/json
+
+### List collections (should be empty initially)
+GET http://localhost:8000/collections/
+Accept: application/json
+
+### Create a collection
+POST http://localhost:8000/collections/
+Content-Type: application/json
+
+{
+  "name": "Test Collection",
+  "description": "A test collection",
+  "color": "#FF5733"
+}
+
+
+### Get collection by ID
+@COLLECTION_ID=a4c92a1a-28c1-4fef-9f32-d4081f81930b
+GET http://localhost:8000/collections/{{COLLECTION_ID}}
+Accept: application/json
+
+### Update the collection
+PUT http://localhost:8000/collections/{{COLLECTION_ID}}
+Content-Type: application/json
+
+{
+  "name": "Beck's Folder",
+  "description": "Updated description"
+}
+
+### Delete the collection
+DELETE http://localhost:8000/collections/{{COLLECTION_ID}}
+
+
+### List all documents
+GET http://localhost:8000/documents
+Accept: application/json
+
+### List documents by collection ID
+GET http://localhost:8000/documents?collection_id={{COLLECTION_ID}}
+Accept: application/json
+
+### Upload a document
+POST http://localhost:8000/documents/
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="collection_id"
+
+{{COLLECTION_ID}}
+--boundary
+Content-Disposition: form-data; name="file"; filename="test.pdf"
+Content-Type: application/pdf
+
+< ./j_feather_health_insurance.pdf
+--boundary--
+
+### Get document status
+@DOCUMENT_ID=df25e65a-c71d-4b80-9068-9548dd9bd6c1
+GET http://localhost:8000/documents/{{DOCUMENT_ID}}
+Accept: application/json
+
+### Delete document
+DELETE http://localhost:8000/documents/{{DOCUMENT_ID}}
+
+### Search with vector-only (assumes some documents already indexed)
+POST http://localhost:8000/search/
+Content-Type: application/json
+
+{
+  "query_text": "Project Preparation",
+  "collection_id": "{{COLLECTION_ID}}",
+  "top_k": 20,
+  "use_hybrid": false,
+  "filters": {"min_similarity": 0.3}
+}
+
+### List chat sessions
+GET http://localhost:8000/chat/sessions
+Accept: application/json
+
+### Create chat session
+POST http://localhost:8000/chat/sessions
+Content-Type: application/json
+
+{
+  "name": "Test Chat",
+  "collection_id": "{{COLLECTION_ID}}"
+}
+
+### Send a message (non-streaming)
+@SESSION_ID=f4ba78a1-2f9e-4430-8166-900e6b01f7e6
+POST http://localhost:8000/chat/message
+Content-Type: application/json
+
+{
+  "session_id": "{{SESSION_ID}}",
+  "user_message": "Give me a summary of my insurance policy?"
+}
+
+### Send a message (streaming)
+POST http://localhost:8000/chat/stream
+Content-Type: application/json
+
+{
+  "session_id": "{{SESSION_ID}}",
+  "user_message": "hello"
+}
+
+### List chat messages for a session
+GET http://localhost:8000/chat/messages?session_id={{SESSION_ID}}
+Accept: application/json

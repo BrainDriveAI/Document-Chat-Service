@@ -1,0 +1,172 @@
+:root {
+  /* Converted from your Sass-like variables */
+  --app-default-font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --darkish: #3E3E3E;
+  --dark-blue: #14142B;
+  --light-blue: #F9F9FF;
+  --readable-primary: #111111;
+  --readable-secondary: rgba(73, 56, 81, 0.53);
+}
+
+/* Apply global box-sizing and font */
+html, body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+    font-family: var(--app-default-font-family), sans-serif;
+}
+
+/* Typography base margins */
+blockquote,
+h1, h2, h3, h4, h5, h6,
+ol,
+pre,
+ul {
+  margin: 1rem 0;
+}
+
+p {
+  margin: 0.5rem 0;
+}
+
+/* Remove top margin if first child */
+blockquote:first-child,
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child,
+h5:first-child,
+h6:first-child,
+ol:first-child,
+p:first-child,
+pre:first-child,
+ul:first-child {
+  margin-top: 0;
+}
+
+/* Specific heading first-child spacing */
+h1:first-child {
+  padding-bottom: 6px;
+  margin-bottom: 1.2rem;
+}
+
+/* Remove bottom margin if last child */
+blockquote:last-child,
+h1:last-child,
+h2:last-child,
+h3:last-child,
+h4:last-child,
+h5:last-child,
+h6:last-child,
+ol:last-child,
+p:last-child,
+pre:last-child,
+ul:last-child {
+  margin-bottom: 0;
+}
+
+/* Line-height for headings */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.3;
+}
+
+/* Heading font-sizes */
+h1 {
+  font-size: 3rem;
+  font-weight: 800;
+}
+h2 {
+  font-size: 2.6rem;
+}
+h3 {
+  font-size: 2rem;
+}
+h4 {
+  font-size: 1.8rem;
+}
+h5 {
+  font-size: 1.5rem;
+}
+h6 {
+  font-size: 1.2rem;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700;
+  border-radius: 2px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Speech Bubbles Scroll Element */
+.scrollable-element {
+  overflow: auto;
+
+  /* Hide scrollbar for Chrome, Safari, and Opera */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge, and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animation for messages */
+.message-enter {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Typing indicator */
+.typing-indicator {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* File upload area */
+.drop-zone {
+    transition: all 0.3s ease;
+}
+.drop-zone.dragover {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
