@@ -11,10 +11,13 @@ from ...api.deps import (
     get_document_repository,
     get_collection_repository,
     get_document_processing_use_case,
-    get_vector_store
+    get_vector_store,
+    get_storage_service,
 )
-from ...core.use_cases.document_use_case import DocumentProcessingUseCase
+
+from ...core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
 from ...core.ports.vector_store import VectorStore
+from ...core.ports.storage_service import StorageService
 from ...core.domain.entities.document import Document as DomainDocument, DocumentType
 from ...core.domain.exceptions import InvalidDocumentTypeError
 
@@ -73,7 +76,7 @@ def determine_document_type(filename: str) -> DocumentType:
         raise InvalidDocumentTypeError(f"Unsupported file extension: {ext}")
 
 
-async def process_document_background(doc_use_case: DocumentProcessingUseCase, document: DomainDocument):
+async def process_document_background(doc_use_case: SimplifiedDocumentProcessingUseCase, document: DomainDocument):
     """
     Background task to process document.
     """
@@ -101,8 +104,9 @@ async def upload_document(
         collection_id: str = Form(...),
         document_repo: SQLiteDocumentRepository = Depends(get_document_repository),
         collection_repo: SQLiteCollectionRepository = Depends(get_collection_repository),
-        doc_use_case: DocumentProcessingUseCase = Depends(get_document_processing_use_case),
+        doc_use_case: SimplifiedDocumentProcessingUseCase = Depends(get_document_processing_use_case),
         vector_store=Depends(get_vector_store),
+        storage_service: StorageService = Depends(get_storage_service),
 ):
     """
     Upload a document file to a collection, save it, and trigger background processing.
@@ -122,21 +126,40 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(e))
 
     # 3. Save file to disk
-    uploads_base = Path(settings.UPLOADS_DIR)
-    collection_dir = uploads_base / collection_id
-    collection_dir.mkdir(parents=True, exist_ok=True)
+    # uploads_base = Path(settings.UPLOADS_DIR)
+    # collection_dir = uploads_base / collection_id
+    # collection_dir.mkdir(parents=True, exist_ok=True)
 
-    import uuid
-    new_id = str(uuid.uuid4())
-    ext = Path(file.filename).suffix.lower()
-    saved_filename = f"{new_id}{ext}"
-    saved_path = collection_dir / saved_filename
+    # import uuid
+    # new_id = str(uuid.uuid4())
+    # ext = Path(file.filename).suffix.lower()
+    # saved_filename = f"{new_id}{ext}"
+    # saved_path = collection_dir / saved_filename
 
+    # try:
+    #     # Write file
+    #     with open(saved_path, "wb") as out_file:
+    #         shutil.copyfileobj(file.file, out_file)
+    #     logger.info(f"File saved to: {saved_path}")
+    # except Exception as e:
+    #     logger.error(f"Failed to save file: {e}")
+    #     raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+    # finally:
+    #     file.file.close()
+
+    # 3. Save file using storage service
     try:
-        # Write file
-        with open(saved_path, "wb") as out_file:
-            shutil.copyfileobj(file.file, out_file)
+        saved_path = await storage_service.save_file(
+            file_content=file.file,
+            collection_id=collection_id,
+            filename=file.filename
+        )
         logger.info(f"File saved to: {saved_path}")
+        
+        # Get file size from storage service
+        file_size = await storage_service.get_file_size(saved_path)
+        if file_size is None:
+            raise HTTPException(status_code=500, detail="Failed to get file size after saving")
     except Exception as e:
         logger.error(f"Failed to save file: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
@@ -144,12 +167,13 @@ async def upload_document(
         file.file.close()
 
     # 4. Create DomainDocument entity
-    file_stat = saved_path.stat()
+    saved_filename = Path(saved_path).name
+    # file_stat = saved_path.stat()
     domain_doc = DomainDocument.create(
         filename=saved_filename,
         original_filename=file.filename,
         file_path=str(saved_path),
-        file_size=file_stat.st_size,
+        file_size=file_size,
         document_type=doc_type,
         collection_id=collection_id,
         metadata={}
@@ -165,7 +189,7 @@ async def upload_document(
         logger.error(f"Failed to save document to database: {e}")
         # Cleanup file if DB save fails
         try:
-            saved_path.unlink(missing_ok=True)
+            await storage_service.delete_file(saved_path)
         except:
             pass
         raise HTTPException(status_code=500, detail=f"Failed to save document record: {e}")
@@ -212,33 +236,76 @@ async def list_documents(
 async def delete_document(
         document_id: str,
         document_repo: SQLiteDocumentRepository = Depends(get_document_repository),
-        vector_store: VectorStore = Depends(get_vector_store)
+        vector_store: VectorStore = Depends(get_vector_store),
+        storage_service: StorageService = Depends(get_storage_service),
 ):
     """
     Delete a document: remove from vector store and delete DB record and file.
+    Only returns success if ALL components are deleted successfully.
     """
     # 1. Fetch document
     doc = await document_repo.find_by_id(document_id)
     if not doc:
         raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
-
+    
+    # Track deletion results
+    deletion_results = {
+        "vector_store": {"success": False, "error": None},
+        "file": {"success": False, "error": None},
+        "database": {"success": False, "error": None}
+    }
+    
     # 2. Delete from vector store
     try:
         await vector_store.delete_by_document_id(document_id)
+        deletion_results["vector_store"]["success"] = True
     except Exception as e:
-        logger.warning(f"Failed to delete chunks from vector store for {document_id}: {e}")
-
+        deletion_results["vector_store"]["error"] = str(e)
+        logger.error(f"Failed to delete chunks from vector store for {document_id}: {e}")
+    
     # 3. Delete file on disk
     try:
-        path = Path(doc.file_path)
-        if path.exists():
-            path.unlink()
+        saved_path = Path(doc.file_path)
+        if saved_path.exists():
+            await storage_service.delete_file(saved_path)
+            deletion_results["file"]["success"] = True
+        else:
+            # File doesn't exist, consider it "successfully deleted"
+            deletion_results["file"]["success"] = True
+            logger.info(f"File {doc.file_path} already doesn't exist")
     except Exception as e:
-        logger.warning(f"Failed to delete file {doc.file_path}: {e}")
-
+        deletion_results["file"]["error"] = str(e)
+        logger.error(f"Failed to delete file {doc.file_path}: {e}")
+    
     # 4. Delete from repository
-    success = await document_repo.delete(document_id)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to delete document record")
+    try:
+        success = await document_repo.delete(document_id)
+        if success:
+            deletion_results["database"]["success"] = True
+        else:
+            deletion_results["database"]["error"] = "Repository delete returned False"
+    except Exception as e:
+        deletion_results["database"]["error"] = str(e)
+        logger.error(f"Failed to delete document record {document_id}: {e}")
+    
+    # Check if ALL deletions were successful
+    all_successful = all(result["success"] for result in deletion_results.values())
+    
+    if not all_successful:
+        # Collect all errors
+        errors = []
+        for component, result in deletion_results.items():
+            if not result["success"]:
+                errors.append(f"{component}: {result['error']}")
+        
+        error_message = f"Failed to delete document completely. Errors: {'; '.join(errors)}"
+        raise HTTPException(status_code=500, detail=error_message)
+    
+    # All deletions successful
+    return {
+        "message": "Document deleted successfully from all systems",
+        "document_id": document_id,
+        "document_name": doc.filename,
+        "deleted_from": ["vector_store", "local_disk", "database"]
+    }
 
-    return
