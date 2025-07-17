@@ -19,7 +19,9 @@ from .config import settings
 # Import adapter classes
 from .adapters.document_processing.chunking_strategies import OptimizedHierarchicalChunkingStrategy
 from .adapters.token_service.tiktoken_service import TikTokenService
-from .adapters.document_processing.spacy_layout_processor import SpacyLayoutProcessor
+from .adapters.storage.local_storage import LocalStorageService
+# from .adapters.document_processing.simple_spacy_layout import SimpleSpacyLayoutProcessor
+from .adapters.document_processing.remote_document_processor import RemoteDocumentProcessor
 from .adapters.embedding.ollama_embedding import OllamaEmbeddingService
 from .adapters.llm.ollama_llm import OllamaLLMService
 from .adapters.vector_store.chroma_store import ChromaVectorStoreAdapter
@@ -90,6 +92,12 @@ async def on_startup():
     logger.info("Application startup: instantiating adapters...")
     os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
 
+    print(f"Setting: {settings}")
+
+    # Storage service
+    storage_service = LocalStorageService()
+    app.state.storage_service = storage_service
+
     # Token service
     token_service = TikTokenService()
 
@@ -97,8 +105,15 @@ async def on_startup():
     chunking_strategy = OptimizedHierarchicalChunkingStrategy(token_service)
 
     # Document processor
-    app.state.document_processor = SpacyLayoutProcessor(
-        spacy_model=settings.SPACY_MODEL,
+    # app.state.document_processor = SimpleSpacyLayoutProcessor(
+    #     spacy_model=settings.SPACY_MODEL,
+    #     token_service=token_service,
+    # )
+    app.state.document_processor = RemoteDocumentProcessor(
+        api_base_url=str(settings.DOCUMENT_PROCESSOR_API_URL),
+        storage_service=storage_service,
+        timeout=300,
+        max_retries=3
     )
 
     # Embedding service
@@ -128,6 +143,9 @@ async def on_startup():
             model_name=settings.OLLAMA_CONTEXTUAL_LLM_MODEL,
             timeout=settings.LLM_TIMEOUT
         )
+    else:
+        # Create a None placeholder so dependency injection doesn't fail
+        app.state.contextual_llm_service = None
 
     # Vector store
     persist_dir = settings.CHROMA_PERSIST_DIR
