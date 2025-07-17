@@ -26,7 +26,7 @@ class AppSettings(BaseSettings):
 
     # -- Embedding provider selection --
     EMBEDDING_PROVIDER: Literal['openai', 'pinecone', 'ollama'] = Field(
-        default='pinecone',
+        default='ollama',
         env='EMBEDDING_PROVIDER',
         description="Which embedding provider to use: openai, pinecone, or ollama."
     )
@@ -54,6 +54,7 @@ class AppSettings(BaseSettings):
     # Vector store (Chroma)
     CHROMA_PERSIST_DIR: str = Field("./data/vector_db", env="CHROMA_PERSIST_DIR")
     CHROMA_COLLECTION_NAME: str = Field("documents", env="CHROMA_COLLECTION_NAME")
+    ANONYMIZED_TELEMETRY: Optional[bool] = Field(False, env="ANONYMIZED_TELEMETRY")
 
     # BM25 Index Storage
     BM25_PERSIST_DIR: str = Field("./data/bm25_index", env="BM25_PERSIST_DIR",
@@ -69,6 +70,11 @@ class AppSettings(BaseSettings):
     UPLOAD_MAX_PART_SIZE: int = 50 * 1024 * 1024
     UPLOAD_MAX_FIELDS: Optional[int] = None
     UPLOAD_MAX_FILE_SIZE: Optional[int] = None
+
+    # Document Processor API Configuration
+    DOCUMENT_PROCESSOR_API_URL: Optional[HttpUrl] = Field(default=None, description="Document processor API URL")
+    DOCUMENT_PROCESSOR_TIMEOUT: int = 300 
+    DOCUMENT_PROCESSOR_MAX_RETRIES: int = 3
 
     # FastAPI settings
     API_HOST: str = Field("0.0.0.0", env="API_HOST")
