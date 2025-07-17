@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from ...core.domain.entities.document import Document
 from ...core.domain.entities.document_chunk import DocumentChunk
 
@@ -11,7 +11,8 @@ class ChunkingStrategy(ABC):
     async def create_chunks(
             self,
             document: Document,
-            structured_content: Dict[str, Any]
+            structured_content: Dict[str, Any],
+            complete_text: Optional[str]
     ) -> List[DocumentChunk]:
         """Create chunks from structured content"""
         pass
