@@ -9,6 +9,7 @@ from ..adapters.orchestration.langgraph_orchestrator import LangGraphOrchestrato
 
 # Port interfaces
 from ..core.ports.document_processor import DocumentProcessor
+from ..core.ports.storage_service import StorageService
 from ..core.ports.embedding_service import EmbeddingService
 from ..core.ports.vector_store import VectorStore
 from ..core.ports.llm_service import LLMService
@@ -20,7 +21,8 @@ from ..core.ports.repositories import (
 )
 
 # Use-case classes
-from ..core.use_cases.document_use_case import DocumentProcessingUseCase
+# from ..core.use_cases.document_use_case import DocumentProcessingUseCase
+from ..core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
 from ..core.use_cases.collection_management import CollectionManagementUseCase
 from ..core.use_cases.search_documents import SearchDocumentsUseCase
 from ..core.use_cases.chat_interaction import ChatInteractionUseCase
@@ -33,6 +35,16 @@ def get_document_processor(request: Request) -> DocumentProcessor:
         raise HTTPException(status_code=500, detail="DocumentProcessor not initialized")
     return dp
 
+def get_storage_service(request: Request) -> StorageService:
+    """
+    Get storage service instance.
+    Currently returns LocalStorageService, but can be easily swapped
+    for cloud storage implementations.
+    """
+    storage_service = getattr(request.app.state, "storage_service", None)
+    if storage_service is None:
+        raise HTTPException(status_code=500, detail="Storage service not initialized")
+    return storage_service
 
 def get_embedding_service(request: Request) -> EmbeddingService:
     embedder = getattr(request.app.state, "embedding_service", None)
@@ -125,8 +137,8 @@ def get_document_processing_use_case(
         llm_service: LLMService = Depends(get_llm_service),
         contextual_llm: LLMService = Depends(get_contextual_llm_service),
         bm25_service: BM25Service = Depends(get_bm25_service),
-) -> DocumentProcessingUseCase:
-    return DocumentProcessingUseCase(
+) -> SimplifiedDocumentProcessingUseCase:
+    return SimplifiedDocumentProcessingUseCase(
         document_repo=document_repo,
         collection_repo=collection_repo,
         document_processor=document_processor,
