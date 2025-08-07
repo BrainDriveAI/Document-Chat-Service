@@ -227,6 +227,11 @@ This is the fastest way to get the application running without worrying about lo
     ```
 4.  **Access the application at `http://localhost:8000`.**
 
+5. **To stop the containers.**
+  ```bash
+  docker-compose down
+  ```
+
 ### 3\. Advanced Deployment
 
 For a production-ready setup with Nginx and Prometheus, use the provided `docker-compose.prod.yml` file.
