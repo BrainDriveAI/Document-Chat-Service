@@ -1,0 +1,17 @@
+.env
+.env.*
+
+/.idea
+__pycache__/
+
+venv/
+
+Dockerfile.dev
+
+*.json
+
+data
+
+/chat_prompt.txt
+/upload_test.py
+/project_structure.py

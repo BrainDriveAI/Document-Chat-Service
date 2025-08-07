@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: 'chat_with_docs'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:8000']  # if service name is 'app'
