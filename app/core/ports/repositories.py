@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from ..domain.entities.collection import Collection
+from ..domain.entities.collection import Collection, CollectionWithDocuments
 from ..domain.entities.document import Document
 from ..domain.entities.chat import ChatSession, ChatMessage
 
@@ -19,7 +19,7 @@ class CollectionRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_id_with_documents(self, collection_id: str) -> Optional[Collection]:
+    async def find_by_id_with_documents(self, collection_id: str) -> Optional[CollectionWithDocuments]:
         """Find collection by ID along with all its associated documents"""
         pass
 
@@ -53,6 +53,11 @@ class DocumentRepository(ABC):
         pass
 
     @abstractmethod
+    async def find_all(self) -> List[Document]:
+        """Get all documents"""
+        pass
+
+    @abstractmethod
     async def delete(self, document_id: str) -> bool:
         """Delete a document"""
         pass
@@ -74,6 +79,11 @@ class ChatRepository(ABC):
     @abstractmethod
     async def find_session(self, session_id: str) -> Optional[ChatSession]:
         """Find chat session by ID"""
+        pass
+
+    @abstractmethod
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete chat session by ID"""
         pass
 
     @abstractmethod

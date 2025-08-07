@@ -1,3 +1,5 @@
+from typing import Dict, Any, Optional
+
 class DomainException(Exception):
     """Base exception for domain layer"""
     pass
@@ -16,6 +18,38 @@ class CollectionNotFoundError(DomainException):
 class DocumentProcessingError(DomainException):
     """Raised when document processing fails"""
     pass
+
+class DocumentDeletionError(DomainException):
+    """Raised when document deletion fails"""
+    pass
+
+class DocumentDeletionError(DomainException):
+    """Base class for document deletion errors"""
+    def __init__(self, message: str, deletion_results: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.deletion_results = deletion_results or {}
+
+class VectorStoreDeletionError(DocumentDeletionError):
+    """Raised when vector store deletion fails"""
+    pass
+
+class FileDeletionError(DocumentDeletionError):
+    """Raised when file deletion fails from storage service"""
+    pass
+
+class DatabaseDeletionError(DocumentDeletionError):
+    """Raised when database deletion fails from repository"""
+    pass
+
+class CollectionCountUpdateError(DocumentDeletionError):
+    """Raised when collection count update fails"""
+    pass
+
+class PartialDocumentDeletionError(DocumentDeletionError):
+    """Raised when some but not all deletion operations fail"""
+    def __init__(self, message: str, deletion_results: Dict[str, Any], failed_operations: list):
+        super().__init__(message, deletion_results)
+        self.failed_operations = failed_operations
 
 
 class EmbeddingGenerationError(DomainException):

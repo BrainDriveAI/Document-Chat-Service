@@ -16,13 +16,20 @@ from ...api.deps import (
 )
 
 from ...core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
+from ...core.use_cases.document_management import DocumentManagementUseCase
 from ...core.ports.vector_store import VectorStore
 from ...core.ports.storage_service import StorageService
 from ...core.domain.entities.document import Document as DomainDocument, DocumentType
-from ...core.domain.exceptions import InvalidDocumentTypeError
+from ...core.domain.exceptions import (
+    InvalidDocumentTypeError,
+    DocumentNotFoundError,
+    DocumentDeletionError,
+    PartialDocumentDeletionError,
+)
 
 from ...config import settings
 
+from ...api.deps import get_document_management_use_case
 from ...adapters.persistence.sqlite_repository import SQLiteDocumentRepository, SQLiteCollectionRepository
 
 router = APIRouter()
@@ -204,108 +211,62 @@ async def upload_document(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
         document_id: str,
-        document_repo: SQLiteDocumentRepository = Depends(get_document_repository)
+        document_use_case: DocumentManagementUseCase = Depends(get_document_management_use_case)
 ):
     """
-    Get document info and status.
+    Get document info and status by id.
     """
-    doc = await document_repo.find_by_id(document_id)
-    if not doc:
+    try:
+        document = await document_use_case.get_document_by_id(document_id)
+    except DocumentNotFoundError:
         raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
-    return to_document_response(doc)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get document: {str(e)}")
+    return to_document_response(document)
 
 
 @router.get("/", response_model=List[DocumentResponse])
 async def list_documents(
         collection_id: Optional[str] = None,
-        document_repo: SQLiteDocumentRepository = Depends(get_document_repository),
-        vector_store: VectorStore = Depends(get_vector_store)
+        document_use_case: DocumentManagementUseCase = Depends(get_document_management_use_case)
 ):
     """
     List documents, optionally filtered by collection_id.
     """
-    if collection_id:
-        docs = await document_repo.find_by_collection_id(collection_id)
-    else:
-        docs = await document_repo.find_all()
-        # raise HTTPException(status_code=400, detail="collection_id query parameter is required")
-    return [to_document_response(d) for d in docs]
+    try:
+        documents = await document_use_case.list_documents(collection_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list documents: {str(e)}")
+    return [to_document_response(d) for d in documents]
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
         document_id: str,
-        document_repo: SQLiteDocumentRepository = Depends(get_document_repository),
-        vector_store: VectorStore = Depends(get_vector_store),
-        storage_service: StorageService = Depends(get_storage_service),
+        document_use_case: DocumentManagementUseCase = Depends(get_document_management_use_case)
 ):
     """
     Delete a document: remove from vector store and delete DB record and file.
     Only returns success if ALL components are deleted successfully.
     """
-    # 1. Fetch document
-    doc = await document_repo.find_by_id(document_id)
-    if not doc:
+    try:
+        result = await document_use_case.delete_document(document_id)
+    except DocumentNotFoundError:
         raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
-    
-    # Track deletion results
-    deletion_results = {
-        "vector_store": {"success": False, "error": None},
-        "file": {"success": False, "error": None},
-        "database": {"success": False, "error": None}
-    }
-    
-    # 2. Delete from vector store
-    try:
-        await vector_store.delete_by_document_id(document_id)
-        deletion_results["vector_store"]["success"] = True
+    except PartialDocumentDeletionError as e:
+        # Log the detailed failure info
+        logger.error(f"Partial deletion failure: {e.failed_operations}")
+        # Return 500 but with detailed info for debugging
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "message": "Document partially deleted", 
+                "failed_operations": e.failed_operations,
+                "details": str(e)
+            }
+        )
+    except DocumentDeletionError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
-        deletion_results["vector_store"]["error"] = str(e)
-        logger.error(f"Failed to delete chunks from vector store for {document_id}: {e}")
-    
-    # 3. Delete file on disk
-    try:
-        saved_path = Path(doc.file_path)
-        if saved_path.exists():
-            await storage_service.delete_file(saved_path)
-            deletion_results["file"]["success"] = True
-        else:
-            # File doesn't exist, consider it "successfully deleted"
-            deletion_results["file"]["success"] = True
-            logger.info(f"File {doc.file_path} already doesn't exist")
-    except Exception as e:
-        deletion_results["file"]["error"] = str(e)
-        logger.error(f"Failed to delete file {doc.file_path}: {e}")
-    
-    # 4. Delete from repository
-    try:
-        success = await document_repo.delete(document_id)
-        if success:
-            deletion_results["database"]["success"] = True
-        else:
-            deletion_results["database"]["error"] = "Repository delete returned False"
-    except Exception as e:
-        deletion_results["database"]["error"] = str(e)
-        logger.error(f"Failed to delete document record {document_id}: {e}")
-    
-    # Check if ALL deletions were successful
-    all_successful = all(result["success"] for result in deletion_results.values())
-    
-    if not all_successful:
-        # Collect all errors
-        errors = []
-        for component, result in deletion_results.items():
-            if not result["success"]:
-                errors.append(f"{component}: {result['error']}")
-        
-        error_message = f"Failed to delete document completely. Errors: {'; '.join(errors)}"
-        raise HTTPException(status_code=500, detail=error_message)
-    
-    # All deletions successful
-    return {
-        "message": "Document deleted successfully from all systems",
-        "document_id": document_id,
-        "document_name": doc.filename,
-        "deleted_from": ["vector_store", "local_disk", "database"]
-    }
-
+        logger.error(f"Unexpected error deleting document {document_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

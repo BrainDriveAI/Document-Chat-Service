@@ -1,6 +1,7 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, UTC
-import uuid
+from .document import Document
 
 
 @dataclass
@@ -45,3 +46,45 @@ class Collection:
             raise ValueError("Document count cannot be negative")
         self.document_count = new_count
         self.updated_at = datetime.now(UTC)
+
+
+# Data class for combined collection with documents
+@dataclass
+class CollectionWithDocuments:
+    """Data class representing a collection with its associated documents"""
+
+    def __init__(self, collection: Collection, documents: list[Document]):
+        self.collection = collection
+        self.documents = documents
+
+    def to_dict(self) -> dict[str, any]:
+        """Convert to dictionary for easy serialization"""
+        return {
+            "collection": {
+                "id": self.collection.id,
+                "name": self.collection.name,
+                "description": self.collection.description,
+                "color": self.collection.color,
+                "created_at": self.collection.created_at.isoformat(),
+                "updated_at": self.collection.updated_at.isoformat(),
+                "document_count": self.collection.document_count
+            },
+            "documents": [
+                {
+                    "id": doc.id,
+                    "filename": doc.filename,
+                    "original_filename": doc.original_filename,
+                    "file_path": doc.file_path,
+                    "file_size": doc.file_size,
+                    "document_type": doc.document_type.value,
+                    "collection_id": doc.collection_id,
+                    "status": doc.status.value,
+                    "created_at": doc.created_at.isoformat(),
+                    "processed_at": doc.processed_at.isoformat() if doc.processed_at else None,
+                    "metadata": doc.metadata,
+                    "chunk_count": doc.chunk_count
+                }
+                for doc in self.documents
+            ]
+        }
+

@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Optional, AsyncGenerator, Dict, Any
 from ..domain.entities.chat import ChatSession, ChatMessage
 from ..domain.exceptions import ChatSessionNotFoundError
@@ -37,6 +37,14 @@ class ChatInteractionUseCase:
     async def list_sessions(self) -> List[ChatSession]:
         """List all chat sessions"""
         return await self.chat_repo.find_all_sessions()
+    
+    async def delete_session(self, session_id: str) -> bool:
+        """
+        Deletes a chat session.
+        Raises ChatSessionNotFoundError if the session does not exist.
+        """
+        await self.get_session(session_id)
+        return await self.chat_repo.delete_session(session_id)
 
     async def get_chat_history(
             self,
@@ -76,7 +84,7 @@ class ChatInteractionUseCase:
 
         # Update session stats
         session.message_count += 1
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(UTC)
         await self.chat_repo.save_session(session)
 
         return saved_message
@@ -129,12 +137,18 @@ class ChatInteractionUseCase:
         )
 
         # Save the complete message
-        await self.chat_repo.save_message(chat_message)
+        saved_message = await self.chat_repo.save_message(chat_message)
 
         # Update session stats
         session.message_count += 1
-        session.updated_at = datetime.utcnow()
+        session.updated_at = datetime.now(UTC)
         await self.chat_repo.save_session(session)
+
+        yield {
+            "complete": True,
+            "message_id": saved_message.id,
+            "created_at": saved_message.created_at.isoformat()
+        }
 
     async def list_chat_messages(self, session_id: str) -> List[ChatMessage]:
         """Get all chat messages for a session"""

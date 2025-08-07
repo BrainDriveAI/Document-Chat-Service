@@ -125,7 +125,6 @@ async def update_collection(
 async def delete_collection(
     collection_id: str,
     use_case: CollectionManagementUseCase = Depends(get_collection_management_use_case),
-    collection_repo: SQLiteCollectionRepository = Depends(get_collection_repository)
 ):
     """
     Delete a collection. Note: documents in it should also be deleted or handled separately.

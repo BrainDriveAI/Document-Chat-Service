@@ -6,8 +6,10 @@ from ..config import settings
 
 # Adapter classes
 from ..adapters.orchestration.langgraph_orchestrator import LangGraphOrchestrator
+from ..adapters.logging.python_logger import PythonLogger
 
 # Port interfaces
+from ..core.ports.logger import Logger
 from ..core.ports.document_processor import DocumentProcessor
 from ..core.ports.storage_service import StorageService
 from ..core.ports.embedding_service import EmbeddingService
@@ -24,6 +26,7 @@ from ..core.ports.repositories import (
 # from ..core.use_cases.document_use_case import DocumentProcessingUseCase
 from ..core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
 from ..core.use_cases.collection_management import CollectionManagementUseCase
+from ..core.use_cases.document_management import DocumentManagementUseCase
 from ..core.use_cases.search_documents import SearchDocumentsUseCase
 from ..core.use_cases.chat_interaction import ChatInteractionUseCase
 
@@ -126,6 +129,8 @@ def get_chat_orchestrator(
         max_tokens=2000
     )
 
+def get_document_logger() -> Logger:
+    return PythonLogger(__name__)
 
 # Dependency provider for DocumentProcessingUseCase
 def get_document_processing_use_case(
@@ -154,6 +159,21 @@ def get_collection_management_use_case(
         collection_repo: CollectionRepository = Depends(get_collection_repository)
 ) -> CollectionManagementUseCase:
     return CollectionManagementUseCase(collection_repo=collection_repo)
+
+def get_document_management_use_case(
+        document_repo: DocumentRepository = Depends(get_document_repository),
+        vector_store: VectorStore = Depends(get_vector_store),
+        storage_service: StorageService = Depends(get_storage_service),
+        logger: Logger = Depends(get_document_logger),
+        collection_management_use_case: CollectionManagementUseCase = Depends(get_collection_management_use_case),
+) -> DocumentManagementUseCase:
+    return DocumentManagementUseCase(
+        document_repo=document_repo,
+        vector_store=vector_store,
+        storage_service=storage_service,
+        logger=logger,
+        collection_management_use_case=collection_management_use_case,
+    )
 
 
 def get_search_documents_use_case(

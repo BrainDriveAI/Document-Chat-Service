@@ -3,10 +3,10 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, select
+from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, select, desc, delete
 from ...core.ports.repositories import DocumentRepository, CollectionRepository, ChatRepository
 from ...core.domain.entities.document import Document, DocumentStatus, DocumentType
-from ...core.domain.entities.collection import Collection as DomainCollection
+from ...core.domain.entities.collection import Collection as DomainCollection, CollectionWithDocuments
 from ...core.domain.entities.chat import ChatSession as DomainChatSession, ChatMessage as DomainChatMessage
 
 Base = declarative_base()
@@ -63,45 +63,6 @@ class ChatMessageModel(Base):
     response_time_ms = Column(Integer, nullable=False)
 
 
-# Data class for combined collection with documents
-class CollectionWithDocuments:
-    """Data class representing a collection with its associated documents"""
-
-    def __init__(self, collection: DomainCollection, documents: List[Document]):
-        self.collection = collection
-        self.documents = documents
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for easy serialization"""
-        return {
-            "collection": {
-                "id": self.collection.id,
-                "name": self.collection.name,
-                "description": self.collection.description,
-                "color": self.collection.color,
-                "created_at": self.collection.created_at.isoformat(),
-                "updated_at": self.collection.updated_at.isoformat(),
-                "document_count": self.collection.document_count
-            },
-            "documents": [
-                {
-                    "id": doc.id,
-                    "filename": doc.filename,
-                    "original_filename": doc.original_filename,
-                    "file_path": doc.file_path,
-                    "file_size": doc.file_size,
-                    "document_type": doc.document_type.value,
-                    "collection_id": doc.collection_id,
-                    "status": doc.status.value,
-                    "created_at": doc.created_at.isoformat(),
-                    "processed_at": doc.processed_at.isoformat() if doc.processed_at else None,
-                    "metadata": doc.metadata,
-                    "chunk_count": doc.chunk_count
-                }
-                for doc in self.documents
-            ]
-        }
-
 
 # Repository implementations
 class SQLiteRepositoryMixin:
@@ -143,9 +104,9 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
         """
         Insert or update a collection.
         """
-        async with self._async_session() as session:
-            async with session.begin():
-                existing = await session.get(CollectionModel, collection.id)
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                existing = await db_session.get(CollectionModel, collection.id)
                 if existing:
                     existing.name = collection.name
                     existing.description = collection.description
@@ -162,12 +123,12 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
                         updated_at=collection.updated_at,
                         document_count=collection.document_count
                     )
-                    session.add(model)
+                    db_session.add(model)
         return collection
 
     async def find_by_id(self, collection_id: str) -> Optional[DomainCollection]:
-        async with self._async_session() as session:
-            result = await session.get(CollectionModel, collection_id)
+        async with self._async_session() as db_session:
+            result = await db_session.get(CollectionModel, collection_id)
             if not result:
                 return None
             domain = DomainCollection(
@@ -192,9 +153,9 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
             CollectionWithDocuments object containing the collection and its documents,
             or None if the collection doesn't exist
         """
-        async with self._async_session() as session:
+        async with self._async_session() as db_session:
             # Fetch collection
-            collection_result = await session.get(CollectionModel, collection_id)
+            collection_result = await db_session.get(CollectionModel, collection_id)
             if not collection_result:
                 return None
 
@@ -210,7 +171,7 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
             )
 
             # Fetch associated documents
-            documents_result = await session.execute(
+            documents_result = await db_session.execute(
                 select(DocumentModel).where(DocumentModel.collection_id == collection_id)
             )
             document_records = documents_result.scalars().all()
@@ -246,8 +207,8 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
             return CollectionWithDocuments(collection=collection, documents=documents)
 
     async def find_all(self) -> List[DomainCollection]:
-        async with self._async_session() as session:
-            result = await session.execute(select(CollectionModel))
+        async with self._async_session() as db_session:
+            result = await db_session.execute(select(CollectionModel).order_by(desc(CollectionModel.created_at)))
             records = result.scalars().all()
             collections: List[DomainCollection] = []
             for rec in records:
@@ -263,12 +224,12 @@ class SQLiteCollectionRepository(CollectionRepository, SQLiteRepositoryMixin):
             return collections
 
     async def delete(self, collection_id: str) -> bool:
-        async with self._async_session() as session:
-            async with session.begin():
-                obj = await session.get(CollectionModel, collection_id)
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                obj = await db_session.get(CollectionModel, collection_id)
                 if not obj:
                     return False
-                await session.delete(obj)
+                await db_session.delete(obj)
             return True
 
 
@@ -282,9 +243,9 @@ class SQLiteDocumentRepository(DocumentRepository, SQLiteRepositoryMixin):
         """
         Insert or update a document record.
         """
-        async with self._async_session() as session:
-            async with session.begin():
-                existing = await session.get(DocumentModel, document.id)
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                existing = await db_session.get(DocumentModel, document.id)
                 if existing:
                     existing.filename = document.filename
                     existing.original_filename = document.original_filename
@@ -312,12 +273,12 @@ class SQLiteDocumentRepository(DocumentRepository, SQLiteRepositoryMixin):
                         metadata_json=document.metadata or {},
                         chunk_count=document.chunk_count
                     )
-                    session.add(model)
+                    db_session.add(model)
         return document
 
     async def find_by_id(self, document_id: str) -> Optional[Document]:
-        async with self._async_session() as session:
-            result = await session.get(DocumentModel, document_id)
+        async with self._async_session() as db_session:
+            result = await db_session.get(DocumentModel, document_id)
             if not result:
                 return None
             try:
@@ -345,8 +306,8 @@ class SQLiteDocumentRepository(DocumentRepository, SQLiteRepositoryMixin):
             return domain
 
     async def find_by_collection_id(self, collection_id: str) -> List[Document]:
-        async with self._async_session() as session:
-            result = await session.execute(
+        async with self._async_session() as db_session:
+            result = await db_session.execute(
                 select(DocumentModel).where(DocumentModel.collection_id == collection_id)
             )
             records = result.scalars().all()
@@ -377,8 +338,8 @@ class SQLiteDocumentRepository(DocumentRepository, SQLiteRepositoryMixin):
             return documents
 
     async def find_all(self) -> List[Document]:
-        async with self._async_session() as session:
-            result = await session.execute(select(DocumentModel))
+        async with self._async_session() as db_session:
+            result = await db_session.execute(select(DocumentModel))
             records = result.scalars().all()
             all_documents: List[Document] = []
             for rec in records:
@@ -407,12 +368,12 @@ class SQLiteDocumentRepository(DocumentRepository, SQLiteRepositoryMixin):
             return all_documents
 
     async def delete(self, document_id: str) -> bool:
-        async with self._async_session() as session:
-            async with session.begin():
-                obj = await session.get(DocumentModel, document_id)
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                obj = await db_session.get(DocumentModel, document_id)
                 if not obj:
                     return False
-                await session.delete(obj)
+                await db_session.delete(obj)
             return True
 
 
@@ -423,9 +384,9 @@ class SQLiteChatRepository(ChatRepository, SQLiteRepositoryMixin):
         SQLiteRepositoryMixin.__init__(self, database_url)
 
     async def save_session(self, session: DomainChatSession) -> DomainChatSession:
-        async with self._async_session() as db:
-            async with db.begin():
-                existing = await db.get(ChatSessionModel, session.id)
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                existing = await db_session.get(ChatSessionModel, session.id)
                 if existing:
                     existing.name = session.name
                     existing.collection_id = session.collection_id
@@ -440,12 +401,12 @@ class SQLiteChatRepository(ChatRepository, SQLiteRepositoryMixin):
                         updated_at=session.updated_at,
                         message_count=session.message_count
                     )
-                    db.add(model)
+                    db_session.add(model)
         return session
 
     async def find_session(self, session_id: str) -> Optional[DomainChatSession]:
-        async with self._async_session() as db:
-            result = await db.get(ChatSessionModel, session_id)
+        async with self._async_session() as db_session:
+            result = await db_session.get(ChatSessionModel, session_id)
             if not result:
                 return None
             domain = DomainChatSession(
@@ -459,8 +420,8 @@ class SQLiteChatRepository(ChatRepository, SQLiteRepositoryMixin):
             return domain
 
     async def find_all_sessions(self) -> List[DomainChatSession]:
-        async with self._async_session() as db:
-            result = await db.execute(select(ChatSessionModel))
+        async with self._async_session() as db_session:
+            result = await db_session.execute(select(ChatSessionModel).order_by(desc(ChatSessionModel.updated_at)))
             records = result.scalars().all()
             sessions: List[DomainChatSession] = []
             for rec in records:
@@ -474,9 +435,24 @@ class SQLiteChatRepository(ChatRepository, SQLiteRepositoryMixin):
                 ))
             return sessions
 
+    async def delete_session(self, session_id: str) -> bool:
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                # 1. Delete all chat messages associated with the session
+                await db_session.execute(
+                    delete(ChatMessageModel).where(ChatMessageModel.session_id == session_id)
+                )
+
+                # 2. Delete the chat session itself
+                session_to_delete = await db_session.get(ChatSessionModel, session_id)
+                if not session_to_delete:
+                    return False
+                await db_session.delete(session_to_delete)
+            return True
+
     async def save_message(self, message: DomainChatMessage) -> DomainChatMessage:
-        async with self._async_session() as db:
-            async with db.begin():
+        async with self._async_session() as db_session:
+            async with db_session.begin():
                 model = ChatMessageModel(
                     id=message.id,
                     session_id=message.session_id,
@@ -487,15 +463,15 @@ class SQLiteChatRepository(ChatRepository, SQLiteRepositoryMixin):
                     created_at=message.created_at,
                     response_time_ms=message.response_time_ms
                 )
-                db.add(model)
+                db_session.add(model)
         return message
 
     async def find_messages(self, session_id: str, limit: int = 50) -> List[DomainChatMessage]:
-        async with self._async_session() as db:
+        async with self._async_session() as db_session:
             stmt = select(ChatMessageModel).where(
                 ChatMessageModel.session_id == session_id
             ).order_by(ChatMessageModel.created_at.asc()).limit(limit)
-            result = await db.execute(stmt)
+            result = await db_session.execute(stmt)
             records = result.scalars().all()
             messages: List[DomainChatMessage] = []
             for rec in records:

@@ -1,12 +1,12 @@
-# File: app/api/routes/chat.py
-
+import json
 from typing import List, AsyncGenerator, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from fastapi.responses import StreamingResponse
 
 from ...api.deps import get_chat_interaction_use_case, get_collection_repository
 from ...core.use_cases.chat_interaction import ChatInteractionUseCase
 from ...core.domain.entities.chat import ChatSession, ChatMessage
+from ...core.domain.exceptions import ChatSessionNotFoundError
 from pydantic import BaseModel, Field
 
 router = APIRouter()
@@ -71,6 +71,32 @@ async def create_session(
         updated_at=session.updated_at.isoformat(),
         message_count=session.message_count
     )
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_session(
+    session_id: str,
+    use_case: ChatInteractionUseCase = Depends(get_chat_interaction_use_case),
+):
+    """
+    Deletes chat session
+    """
+    try:
+        await use_case.delete_session(session_id)
+    except ChatSessionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat session with id '{session_id}' not found."
+        )
+    except Exception as e:
+        # Catch any other unexpected errors during the deletion process
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while deleting the session: {str(e)}"
+        )
+    # FastAPI automatically returns 204 No Content for a successful response with no body
+    # if the status_code is set.
+    return
 
 
 class MessageRequest(BaseModel):
@@ -141,9 +167,11 @@ async def send_message(
     )
 
 
-@router.post("/stream", status_code=200)
+@router.api_route("/stream", methods=["GET", "POST"], status_code=200)
 async def send_message_stream(
-        body: MessageRequest,
+        body: MessageRequest = Body(None),
+        session_id: str = Query(None),
+        user_message: str = Query(None),
         use_case: ChatInteractionUseCase = Depends(get_chat_interaction_use_case),
 ):
     """
@@ -151,19 +179,34 @@ async def send_message_stream(
     Returns a StreamingResponse where each chunk is JSON with fields 'response' and on first chunk 'retrieved_chunks'.
     """
 
+    if body:
+        session_id_val = body.session_id
+        user_message_val = body.user_message
+    else:
+        session_id_val = session_id
+        user_message_val = user_message
+
+    if not session_id_val or not user_message_val:
+        raise HTTPException(400, "Missing session_id or user_message")
+
     async def event_generator():
         try:
             async for chunk in use_case.process_streaming_message(
-                    session_id=body.session_id,
-                    user_message=body.user_message
+                    session_id=session_id_val,
+                    user_message=user_message_val
             ):
                 # Each chunk is a dict: {"response": "...", "retrieved_chunks": [...] (first only)}
-                yield (f"data: {chunk}\n\n")
-            # After streaming done, no further action here; saving was handled in non-streaming process?
-            # Actually, in streaming flow, ChatInteractionUseCase does not save the final message.
-            # You may want to gather the full response then save. For simplicity, client can call non-streaming if persistence is needed.
+                yield f"data: {json.dumps(chunk)}\n\n"
+            # yield f"data: {json.dumps({'complete': True})}\n\n"
         except Exception as e:
-            # On error, send as data
-            yield (f"data: {{'error': '{str(e)}'}}\n\n")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(), 
+        media_type="text/event-stream",
+        # headers={
+        #     "Cache-Control": "no-cache",
+        #     "Connection": "keep-alive",
+        #     "Access-Control-Allow-Origin": "*"
+        # }
+    )

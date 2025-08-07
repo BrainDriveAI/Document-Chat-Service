@@ -1,12 +1,12 @@
 from typing import List
 from datetime import datetime, UTC
-from ..domain.entities.collection import Collection
+from ..domain.entities.collection import Collection, CollectionWithDocuments
 from ..domain.exceptions import CollectionNotFoundError
 from ..ports.repositories import CollectionRepository
 
 
 class CollectionManagementUseCase:
-    """Use case for managing document collections"""
+    """Use case for managing collections"""
 
     def __init__(self, collection_repo: CollectionRepository):
         self.collection_repo = collection_repo
@@ -28,12 +28,12 @@ class CollectionManagementUseCase:
             raise CollectionNotFoundError(f"Collection {collection_id} not found")
         return collection
 
-    async def get_collection_with_documents(self, collection_id: str) -> Collection:
+    async def get_collection_with_documents(self, collection_id: str) -> CollectionWithDocuments:
         """Get a collection by ID along with all its associated documents"""
-        collection = await self.collection_repo.find_by_id_with_documents(collection_id)
-        if not collection:
+        collection_with_docs = await self.collection_repo.find_by_id_with_documents(collection_id)
+        if not collection_with_docs:
             raise CollectionNotFoundError(f"Collection {collection_id} not found")
-        return collection
+        return collection_with_docs
 
     async def list_collections(self) -> List[Collection]:
         """List all collections"""
@@ -73,3 +73,17 @@ class CollectionManagementUseCase:
         collection = await self.get_collection(collection_id)
         collection.decrement_document_count()
         await self.collection_repo.save(collection)
+
+    
+    async def normalize_document_count(self, collection_id: str) -> None:
+        """Normalizes document count based on number of documents in that collection"""
+        # get collection with documents
+        collection_with_docs = await self.get_collection_with_documents(collection_id)
+        collection = collection_with_docs.collection
+        # get documents count in that collection
+        documents = collection_with_docs.documents
+        documents_count = len(documents)
+        # update collection with correct documents count
+        collection.document_count = documents_count
+        await self.collection_repo.save(collection)
+
