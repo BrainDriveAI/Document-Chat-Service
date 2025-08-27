@@ -73,6 +73,7 @@ class AppSettings(BaseSettings):
 
     # Document Processor API Configuration
     DOCUMENT_PROCESSOR_API_URL: Optional[HttpUrl] = Field(default=None, description="Document processor API URL")
+    DOCUMENT_PROCESSOR_API_KEY: Optional[SecretStr] = Field(default=None, description="Your Document Processing API Key.")
     DOCUMENT_PROCESSOR_TIMEOUT: int = 300 
     DOCUMENT_PROCESSOR_MAX_RETRIES: int = 3
 

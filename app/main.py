@@ -109,11 +109,16 @@ async def on_startup():
     #     spacy_model=settings.SPACY_MODEL,
     #     token_service=token_service,
     # )
+    if settings.DOCUMENT_PROCESSOR_API_KEY:
+        document_processor_api_key = settings.DOCUMENT_PROCESSOR_API_KEY.get_secret_value()
+    else:
+        document_processor_api_key = None
     app.state.document_processor = RemoteDocumentProcessor(
         api_base_url=str(settings.DOCUMENT_PROCESSOR_API_URL),
         storage_service=storage_service,
         timeout=300,
-        max_retries=3
+        max_retries=3,
+        api_key=document_processor_api_key
     )
 
     # Embedding service
