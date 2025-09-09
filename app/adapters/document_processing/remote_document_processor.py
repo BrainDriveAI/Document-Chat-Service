@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Optional
 from pathlib import Path
 from ...core.ports.document_processor import DocumentProcessor
 from ...core.ports.storage_service import StorageService
@@ -15,11 +15,14 @@ class RemoteDocumentProcessor(DocumentProcessor):
     Remote document processor that calls deployed document processing API.
     """
     
-    def __init__(self, 
-                 api_base_url: str,
-                 storage_service: StorageService,
-                 timeout: int = 300,
-                 max_retries: int = 1):
+    def __init__(
+            self, 
+            api_base_url: str,
+            storage_service: StorageService,
+            timeout: int = 300,
+            max_retries: int = 1,
+            api_key: Optional[str] = None,
+        ):
         """
         Initialize remote document processor.
         
@@ -34,6 +37,7 @@ class RemoteDocumentProcessor(DocumentProcessor):
         self.timeout = timeout
         self.max_retries = max_retries
         self.logger = logging.getLogger(__name__)
+        self.api_key = api_key
         
         # Supported document types (should match your deployed API)
         self.supported_types = ['pdf', 'docx', 'doc']
@@ -318,6 +322,13 @@ class RemoteDocumentProcessor(DocumentProcessor):
         
         return local_metadata
 
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """Get authentication headers if API key is configured"""
+        headers = {}
+        if self.api_key:
+            headers["X-API-Key"] = self.api_key
+        return headers
+
     async def _call_processing_service_with_retry(self, file_content: bytes, document: Document) -> dict:
         """
         Call document processing service with retry logic.
@@ -336,7 +347,11 @@ class RemoteDocumentProcessor(DocumentProcessor):
                 self.logger.info(f"Calling processing service for document {document.id} (attempt {attempt_number + 1}/{self.max_retries})")
                 
                 timeout = aiohttp.ClientTimeout(total=self.timeout)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
+
+                # Get authentication headers
+                headers = self._get_auth_headers()
+
+                async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
                     # Create form data for document upload
                     upload_form = aiohttp.FormData()
                     upload_form.add_field(
