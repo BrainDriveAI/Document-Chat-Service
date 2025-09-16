@@ -12,11 +12,14 @@ services:
       - "8000:8000"
     volumes:
       # Mount data directory for persistence
-      - ./data:/app/data
+      # - ./data:/app/data
       # Mount uploads directory
-      - ./uploads:/app/uploads
+      # - ./uploads:/app/uploads
       # Mount logs directory
-      - ./logs:/app/logs
+      # - ./logs:/app/logs
+      - ../../persistent/chat_docs/data:/app/data
+      - ../../persistent/chat_docs/uploads:/app/uploads
+      - ../../persistent/chat_docs/logs:/app/logs
     environment:
       # If .env is present, it will override these.
       # Default values are provided if the variables are not set in the .env file or environment.
