@@ -3,7 +3,7 @@ name = "chat-with-your-documents"
 version = "0.1.0"
 description = "BrainDrive Chat With Your Documents project"
 authors = [
-    {name = "Beck Bekmyradov",email = "47065940+bekmuradov@users.noreply.github.com"}
+    {name = "BrainDrive"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
