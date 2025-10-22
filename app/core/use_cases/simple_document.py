@@ -173,7 +173,7 @@ class SimplifiedDocumentProcessingUseCase:
             contextualized_chunks: List[DocumentChunk] = []
 
             # Process chunks in smaller batches to avoid overwhelming the LLM
-            batch_size = getattr(settings, 'CONTEXTUAL_BATCH_SIZE', 5)
+            batch_size = settings.CONTEXTUAL_BATCH_SIZE
 
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i + batch_size]
@@ -188,7 +188,7 @@ class SimplifiedDocumentProcessingUseCase:
                     # Process batch with timeout
                     batch_results = await asyncio.wait_for(
                         asyncio.gather(*batch_tasks, return_exceptions=True),
-                        timeout=getattr(settings, 'CONTEXTUAL_TIMEOUT', 60)
+                        timeout=settings.CONTEXTUAL_CHUNK_TIMEOUT
                     )
 
                     for chunk, result in zip(batch, batch_results):
@@ -231,7 +231,7 @@ class SimplifiedDocumentProcessingUseCase:
             # Generate context with timeout
             context = await asyncio.wait_for(
                 self.contextual_llm.generate_response(context_prompt),
-                timeout=getattr(settings, 'CONTEXTUAL_CHUNK_TIMEOUT', 30)
+                timeout=settings.CONTEXTUAL_CHUNK_TIMEOUT
             )
 
             if context and context.strip():
@@ -267,7 +267,7 @@ class SimplifiedDocumentProcessingUseCase:
     def _create_context_prompt(self, chunk_content: str, full_document: str) -> str:
         """Create an optimized prompt for context generation"""
         # Truncate full document if it's too long to avoid token limits
-        max_doc_length = getattr(settings, 'CONTEXTUAL_DOC_MAX_LENGTH', 8000)
+        max_doc_length = settings.CONTEXTUAL_DOC_MAX_LENGTH
 
         if len(full_document) > max_doc_length:
             # Take beginning and end of document for context
