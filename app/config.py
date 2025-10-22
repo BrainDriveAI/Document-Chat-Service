@@ -38,6 +38,19 @@ class AppSettings(BaseSettings):
                                                    description="Ollama LLM base URL for contextual retrieval.")
     OLLAMA_CONTEXTUAL_LLM_MODEL: Optional[str] = Field(default=None, description="Ollama LLM model for contextual retrieval.")
 
+    CONTEXTUAL_BATCH_SIZE: Optional[int] = Field(
+        default=5,
+        description="Batch size for contextual processing."
+    )
+    CONTEXTUAL_CHUNK_TIMEOUT: Optional[int] = Field(
+        default=60,
+        description="Timeout in seconds for contextual batch processing."
+    )
+    CONTEXTUAL_DOC_MAX_LENGTH: Optional[int] = Field(
+        default=8000,
+        description="Contextual processing prompt length."
+    )
+
     # Groq
     GROQ_API_KEY: Optional[SecretStr] = Field(default=None, description="Your Groq API Key.")
     GROQ_LLM_MODEL: Optional[str] = Field(default="llama3-70b-8192", description="The Groq LLM model to be used.")
