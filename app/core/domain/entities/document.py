@@ -16,6 +16,10 @@ class DocumentType(Enum):
     PDF = "pdf"
     DOCX = "docx"
     DOC = "doc"
+    MARKDOWN = "md"
+    HTML = "html"
+    PPTX = "pptx"
+    UNKNOWN = "unknown"
 
 
 @dataclass

@@ -71,17 +71,44 @@ def to_document_response(doc: DomainDocument) -> DocumentResponse:
     )
 
 
-def determine_document_type(filename: str) -> DocumentType:
-    ext = Path(filename).suffix.lower().lstrip(".")
-    if ext == "pdf":
-        return DocumentType.PDF
-    elif ext == "docx":
-        return DocumentType.DOCX
-    elif ext == "doc":
-        return DocumentType.DOC
-    else:
-        raise InvalidDocumentTypeError(f"Unsupported file extension: {ext}")
+# def determine_document_type(filename: str) -> DocumentType:
+#     ext = Path(filename).suffix.lower().lstrip(".")
+#     if ext == "pdf":
+#         return DocumentType.PDF
+#     elif ext == "docx":
+#         return DocumentType.DOCX
+#     elif ext == "doc":
+#         return DocumentType.DOC
+#     else:
+#         raise InvalidDocumentTypeError(f"Unsupported file extension: {ext}")
 
+def determine_document_type(filename: str) -> DocumentType:
+    """
+    Determine document type from file extension.
+    Supports: PDF, DOCX, DOC, PPTX, HTML, MD
+    """
+    ext = Path(filename).suffix.lower().lstrip(".")
+    
+    # Map extensions to DocumentType enum
+    ext_mapping = {
+        "pdf": DocumentType.PDF,
+        "docx": DocumentType.DOCX,
+        "doc": DocumentType.DOC,
+        "md": DocumentType.MARKDOWN,
+        "markdown": DocumentType.MARKDOWN,
+        "pptx": DocumentType.PPTX,
+        "ppt": DocumentType.PPTX,
+        "html": DocumentType.HTML,
+        "htm": DocumentType.HTML,
+    }
+    
+    if ext not in ext_mapping:
+        supported_types = ", ".join(sorted(ext_mapping.keys()))
+        raise InvalidDocumentTypeError(
+            f"Unsupported file extension: .{ext}. Supported types: {supported_types}"
+        )
+    
+    return ext_mapping[ext]
 
 async def process_document_background(doc_use_case: SimplifiedDocumentProcessingUseCase, document: DomainDocument):
     """
