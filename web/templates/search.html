@@ -260,21 +260,29 @@ async function handleSearch(event) {
     const searchParams = {
         query_text: formData.get('query'),
         collection_id: formData.get('collection_id') || null,
-        top_k: parseInt(formData.get('top_k')),
-        use_hybrid: formData.get('search_type') === 'hybrid',
-        filters: {}
+        chat_history: [],
+        config: {
+            top_k: parseInt(formData.get('top_k')),
+            use_hybrid: formData.get('search_type') === 'hybrid',
+            use_intent_classification: true,
+            query_transformation: {
+                enabled: true,
+                methods: ["multi_query"]
+            },
+            filters: {},
+        }
     };
 
     // Add file type filters
     const fileTypes = formData.getAll('file_types');
     if (fileTypes.length > 0 && fileTypes.length < 3) {
-        searchParams.filters.file_type = fileTypes;
+        searchParams.config.filters.file_type = fileTypes;
     }
 
     // Add similarity threshold if specified
     const threshold = parseFloat(formData.get('threshold'));
     if (threshold > 0) {
-        searchParams.filters.min_similarity = threshold;
+        searchParams.config.filters.min_similarity = threshold;
     }
 
     try {
