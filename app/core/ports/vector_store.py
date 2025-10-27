@@ -74,3 +74,37 @@ class VectorStore(ABC):
     async def delete_by_collection_id(self, collection_id: str) -> bool:
         """Delete all chunks for a specific collection"""
         pass
+
+    @abstractmethod
+    async def get_all_chunks_in_collection(
+        self,
+        collection_id: str,
+        limit: Optional[int] = None,
+        include_embeddings: bool = True
+    ) -> List[DocumentChunk]:
+        """
+        Get all chunks in a collection (for collection-level operations).
+        
+        Args:
+            collection_id: Collection ID
+            limit: Maximum number of chunks to return
+            include_embeddings: Whether to include embedding vectors
+            
+        Returns:
+            List of document chunks
+        """
+        pass
+    
+    @abstractmethod
+    async def get_chunk_by_id(self, chunk_id: str) -> Optional[DocumentChunk]:
+        """
+        Get a specific chunk by its ID.
+        
+        Args:
+            chunk_id: The chunk ID
+            
+        Returns:
+            DocumentChunk if found, None otherwise
+        """
+        pass
+
