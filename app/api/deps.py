@@ -7,6 +7,7 @@ from ..config import settings
 # Adapter classes
 from ..adapters.orchestration.langgraph_orchestrator import LangGraphOrchestrator
 from ..adapters.logging.python_logger import PythonLogger
+from ..adapters.clustering.sklearn_clustering import SklearnClusteringAdapter
 
 # Port interfaces
 from ..core.ports.logger import Logger
@@ -18,17 +19,20 @@ from ..core.ports.llm_service import LLMService
 from ..core.ports.bm25_service import BM25Service
 from ..core.ports.rank_fusion_service import RankFusionService
 from ..core.ports.orchestrator import ChatOrchestrator
+from ..core.ports.clustering_service import ClusteringService
 from ..core.ports.repositories import (
     DocumentRepository, CollectionRepository, ChatRepository
 )
 
 # Use-case classes
-# from ..core.use_cases.document_use_case import DocumentProcessingUseCase
 from ..core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
 from ..core.use_cases.collection_management import CollectionManagementUseCase
 from ..core.use_cases.document_management import DocumentManagementUseCase
-from ..core.use_cases.search_documents import SearchDocumentsUseCase
+from ..core.use_cases.search_documents_u import SearchDocumentsUseCase
 from ..core.use_cases.chat_interaction import ChatInteractionUseCase
+from ..core.use_cases.query_transformation import QueryTransformationUseCase
+from ..core.use_cases.intent_classification import IntentClassificationUseCase
+from ..core.use_cases.collection_summary import CollectionSummaryUseCase
 
 
 # Dependency provider functions
@@ -113,6 +117,10 @@ def get_rank_fusion_service(request: Request) -> RankFusionService:
         raise HTTPException(status_code=500, detail="RankFusionService not initialized")
     return rank_f
 
+def get_clustering_service() -> ClusteringService:
+    """Get Clustering service instance"""
+    return SklearnClusteringAdapter()
+
 
 def get_chat_orchestrator(
         embedding_service: EmbeddingService = Depends(get_embedding_service),
@@ -176,17 +184,47 @@ def get_document_management_use_case(
     )
 
 
+def get_query_transformation_use_case(
+        llm_service: LLMService = Depends(get_llm_service),
+) -> QueryTransformationUseCase:
+    return QueryTransformationUseCase(llm_service=llm_service)
+
+def get_intent_classification_use_case(
+    llm_service: LLMService = Depends(get_llm_service),
+) -> IntentClassificationUseCase:
+    """Get intent classification use case"""
+    return IntentClassificationUseCase(llm_service=llm_service)
+
+def get_collection_summary_use_case(
+    vector_store: VectorStore = Depends(get_vector_store),
+    llm_service: LLMService = Depends(get_llm_service),
+    clustering_service: ClusteringService = Depends(get_clustering_service),
+) -> CollectionSummaryUseCase:
+    """Get collection summary use case"""
+    return CollectionSummaryUseCase(
+        vector_store=vector_store,
+        llm_service=llm_service,
+        clustering_service=clustering_service,
+    )
+
+
 def get_search_documents_use_case(
-        embedding_service: EmbeddingService = Depends(get_embedding_service),
-        vector_store: VectorStore = Depends(get_vector_store),
-        bm25_service: BM25Service = Depends(get_bm25_service),
-        rank_fusion_service: RankFusionService = Depends(get_rank_fusion_service),
+    embedding_service: EmbeddingService = Depends(get_embedding_service),
+    vector_store: VectorStore = Depends(get_vector_store),
+    bm25_service: BM25Service = Depends(get_bm25_service),
+    rank_fusion_service: RankFusionService = Depends(get_rank_fusion_service),
+    query_transformation_use_case: QueryTransformationUseCase = Depends(get_query_transformation_use_case),
+    intent_classification_use_case: IntentClassificationUseCase = Depends(get_intent_classification_use_case),
+    collection_summary_use_case: CollectionSummaryUseCase = Depends(get_collection_summary_use_case),
 ) -> SearchDocumentsUseCase:
     return SearchDocumentsUseCase(
         embedding_service=embedding_service,
         vector_store=vector_store,
         bm25_service=bm25_service,
         rank_fusion_service=rank_fusion_service,
+        query_transformation_use_case=query_transformation_use_case,
+        intent_classification_use_case=intent_classification_use_case,
+        collection_summary_use_case=collection_summary_use_case,
     )
 
 
