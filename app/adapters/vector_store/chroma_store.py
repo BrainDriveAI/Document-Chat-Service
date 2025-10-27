@@ -231,8 +231,6 @@ class ChromaVectorStoreAdapter(VectorStore):
         documents_list = results.get("documents", [[]])
         distances_list = results.get("distances", [[]])
 
-        print(f"||||||||||| Documents List: {documents_list}")
-
         chunks: List[DocumentChunk] = []
 
         for idx, chunk_id in enumerate(ids_list[0]):
@@ -288,15 +286,15 @@ class ChromaVectorStoreAdapter(VectorStore):
             where=where,
             include=['metadatas', 'documents']
         )
-        ids_list = results.get("ids", [[]])
-        metadatas_list = results.get("metadatas", [[]])
-        documents_list = results.get("documents", [[]])
+        ids_list = results.get("ids", [])
+        metadatas_list = results.get("metadatas", [])
+        documents_list = results.get("documents", [])
 
         chunks: List[DocumentChunk] = []
 
-        for idx, chunk_id in enumerate(ids_list[0]):
-            metadata = metadatas_list[0][idx] if metadatas_list and metadatas_list[0] else {}
-            content = documents_list[0][idx] if documents_list and documents_list[0] else ""
+        for idx, chunk_id in enumerate(ids_list):
+            metadata = metadatas_list[idx] if metadatas_list and metadatas_list else {}
+            content = documents_list[idx] if documents_list and documents_list else ""
 
             document_id = metadata.get("document_id")
             coll_id = metadata.get("collection_id")
@@ -359,3 +357,117 @@ class ChromaVectorStoreAdapter(VectorStore):
             return True
         except Exception:
             return False
+
+    async def get_all_chunks_in_collection(self, collection_id, limit = None, include_embeddings = True) -> List[DocumentChunk]:
+        where = {
+            "collection_id": collection_id,
+        }
+        include = ['metadatas', 'documents']
+        if include_embeddings:
+            include.append('embeddings')
+        
+        # Execute the synchronous get operation in the thread pool
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, self._get_all_chunks_in_collection_sync, where, include, limit)
+    
+    def _get_all_chunks_in_collection_sync(self, where: Dict[str, str], include: List[str], limit: Optional[int]) -> List[DocumentChunk]:
+        """
+        Synchronous helper to retrieve all chunks in a collection.
+        """
+        results = self._collection.get(
+            where=where,
+            include=include,
+            limit=limit,
+        )
+        
+        ids_list = results.get("ids", [])
+        metadatas_list = results.get("metadatas", [])
+        documents_list = results.get("documents", [])
+        embeddings_list = results.get("embeddings", [])
+
+        chunks: List[DocumentChunk] = []
+
+        # Iterate over results; ChromaDB returns a flat list for documents and metadata
+        for idx, chunk_id in enumerate(ids_list):
+            metadata = metadatas_list[idx] if metadatas_list and metadatas_list[idx] else {}
+            content = documents_list[idx] if documents_list and documents_list[idx] else ""
+            embeddings = embeddings_list[idx] if embeddings_list and embeddings_list[idx] else None
+
+            document_id = metadata.get("document_id")
+            coll_id = metadata.get("collection_id")
+            chunk_index = metadata.get("chunk_index", 0)
+            chunk_type = metadata.get("chunk_type", "paragraph")
+            parent_chunk_id = metadata.get("parent_chunk_id", None)
+
+            # Convert chunk_index back to int if it was stored as string
+            if isinstance(chunk_index, str) and chunk_index.isdigit():
+                chunk_index = int(chunk_index)
+
+            chunk = DocumentChunk(
+                id=chunk_id,
+                document_id=document_id,
+                collection_id=coll_id,
+                content=content,
+                chunk_index=chunk_index,
+                chunk_type=chunk_type,
+                parent_chunk_id=parent_chunk_id,
+                metadata=metadata,
+                embedding_vector=embeddings
+            )
+            chunks.append(chunk)
+
+        return chunks
+
+    async def get_chunk_by_id(self, chunk_id: str) -> Optional[DocumentChunk]:
+        """
+        Retrieve a single document chunk by its unique ID.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, self._get_chunk_by_id_sync, chunk_id)
+
+    def _get_chunk_by_id_sync(self, chunk_id: str) -> Optional[DocumentChunk]:
+        """
+        Synchronous helper to retrieve a single chunk by its unique ID (ChromaDB internal ID).
+        """
+        # Efficiently query ChromaDB by its internal ID using the 'ids' parameter.
+        results = self._collection.get(
+            ids=[chunk_id],
+            include=['metadatas', 'documents']
+        )
+
+        ids_list = results.get("ids", [])
+        
+        # If the query returns no IDs, the chunk was not found.
+        if not ids_list:
+            return None
+        
+        # Extract the single result (the lists are flat when using .get(ids=[...]))
+        found_id = ids_list[0]
+        # ChromaDB returns a flat list of results for `metadatas` and `documents` when ids are specified.
+        metadata = results.get("metadatas", [None])[0] or {}
+        content = results.get("documents", [None])[0] or ""
+
+        # --- Rebuilding DocumentChunk object ---
+        
+        document_id = metadata.get("document_id")
+        coll_id = metadata.get("collection_id")
+        chunk_index = metadata.get("chunk_index", 0)
+        chunk_type = metadata.get("chunk_type", "paragraph")
+        parent_chunk_id = metadata.get("parent_chunk_id", None)
+        
+        # Convert chunk_index back to int if it was stored as string
+        if isinstance(chunk_index, str) and chunk_index.isdigit():
+            chunk_index = int(chunk_index)
+
+        return DocumentChunk(
+            id=found_id,
+            document_id=document_id,
+            collection_id=coll_id,
+            content=content,
+            chunk_index=chunk_index,
+            chunk_type=chunk_type,
+            parent_chunk_id=parent_chunk_id,
+            metadata=metadata,
+            embedding_vector=None
+        )
+
