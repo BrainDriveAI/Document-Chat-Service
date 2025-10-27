@@ -34,7 +34,7 @@ from .adapters.persistence.sqlite_repository import (
 # Imports for routers
 from .api.routes.documents import router as documents_router
 from .api.routes.collections import router as collections_router
-from .api.routes.search import router as search_router
+from .api.routes.search_u import router as search_router
 from .api.routes.chat import router as chat_router
 from .api.routes.health import router as health_router
 from .api.routes.web import router as web_router
