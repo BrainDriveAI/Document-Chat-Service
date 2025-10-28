@@ -105,30 +105,32 @@ class IntentClassificationUseCase:
         # Format chat history
         history_text = self._format_chat_history(chat_history) if chat_history else "No previous conversation."
         
-        prompt = f"""Analyze the user's intent based on their query and conversation history.
+        prompt = f"""
+            Analyze the user's intent based on their query and conversation history.
 
-Conversation History:
-{history_text}
+            Conversation History:
+            {history_text}
 
-Current Query: "{query}"
+            Current Query: "{query}"
 
-Available Intent Types:
-- RETRIEVAL: User wants specific information from documents (search needed)
-- SUMMARY: User wants a summary of specific document(s) 
-- CLARIFICATION: User is asking a follow-up question about the previous answer
-- COMPARISON: User wants to compare multiple concepts or items
-- LISTING: User wants a list of items, features, or options
-- CHAT: General conversation, no document search needed
+            Available Intent Types:
+            - RETRIEVAL: User wants specific information from documents (search needed)
+            - SUMMARY: User wants a summary of specific document(s) 
+            - CLARIFICATION: User is asking a follow-up question about the previous answer
+            - COMPARISON: User wants to compare multiple concepts or items
+            - LISTING: User wants a list of items, features, or options
+            - CHAT: General conversation, no document search needed
 
-Classify the intent and determine if document retrieval is needed.
+            Classify the intent and determine if document retrieval is needed.
 
-Respond in JSON format:
-{{
-    "intent": "INTENT_TYPE",
-    "requires_retrieval": true/false,
-    "confidence": 0.0-1.0,
-    "reasoning": "brief explanation"
-}}"""
+            Respond in JSON format:
+            {{
+                "intent": "INTENT_TYPE",
+                "requires_retrieval": true/false,
+                "confidence": 0.0-1.0,
+                "reasoning": "brief explanation"
+            }}
+        """
 
         try:
             response = await self.llm_service.generate_response(
@@ -140,10 +142,10 @@ Respond in JSON format:
             # Parse JSON response
             result = self._parse_json_response(response)
             
-            intent_type = IntentKind(result["intent"].lower())
+            intent_kind = IntentKind(result["intent"].lower())
             
             return Intent(
-                intent_type=intent_type,
+                intent_kind=intent_kind,
                 requires_retrieval=result["requires_retrieval"],
                 confidence=result.get("confidence", 0.8),
                 reasoning=result.get("reasoning", "")
