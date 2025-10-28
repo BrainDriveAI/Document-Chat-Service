@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 
 from .document_chunk import DocumentChunk
-from .context_intent_type import IntentType
+from .search_intent import IntentType
 
 
 class GenerationType(Enum):
