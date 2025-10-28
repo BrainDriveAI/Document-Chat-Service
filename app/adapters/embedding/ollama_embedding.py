@@ -9,11 +9,13 @@ from ...core.domain.exceptions import EmbeddingGenerationError
 class OllamaEmbeddingService(EmbeddingService):
     """Ollama implementation of embedding service"""
 
+    LOCALHOST_URL_PREFIX = "http://localhost"
+
     def __init__(
-            self,
-            base_url: str = "http://localhost:11434",
-            model_name: str = "mxbai-embed-large",
-            timeout: int = 30
+        self,
+        base_url: str = "http://localhost:11434",
+        model_name: str = "mxbai-embed-large",
+        timeout: int = 30
     ):
         self.base_url = base_url.rstrip('/')
         self.model_name = model_name
@@ -26,46 +28,71 @@ class OllamaEmbeddingService(EmbeddingService):
         embeddings = await self.generate_embeddings_batch([text])
         return embeddings[0]
 
+    def _build_api_url(self) -> str:
+        """Return the correct API endpoint based on base_url"""
+        if self.base_url.startswith(self.LOCALHOST_URL_PREFIX):
+            return f"{self.base_url}/api/embed"
+        else:
+            return f"{self.base_url}/api/embeddings"
+
+    def _build_api_payload(self, texts: List[str]) -> dict:
+        """
+        Return the correct payload for local or cloud Ollama embedding API.
+        Local supports batch input; cloud only supports single text at a time.
+        """
+        if self.base_url.startswith(self.LOCALHOST_URL_PREFIX):
+            return {
+                "model": self.model_name,
+                "input": texts  # batch
+            }
+        else:
+            if len(texts) != 1:
+                raise ValueError("Cloud API supports one text at a time")
+            return {
+                "model": self.model_name,
+                "prompt": texts[0]
+            }
+
+    async def _extract_embeddings(self, response_json: dict, num_texts: int) -> List[List[float]]:
+        """Normalize embeddings from local or cloud API into list of lists"""
+        if self.base_url.startswith(self.LOCALHOST_URL_PREFIX):
+            embeddings = response_json.get("embeddings", [])
+            if len(embeddings) != num_texts:
+                raise EmbeddingGenerationError(
+                    f"Expected {num_texts} embeddings, got {len(embeddings)}"
+                )
+        else:
+            embedding = response_json.get("embedding")
+            if not embedding:
+                raise EmbeddingGenerationError("No embedding returned from cloud API")
+            embeddings = [embedding]
+        return embeddings
+
     async def generate_embeddings_batch(self, texts: List[str]) -> List[EmbeddingVector]:
         """Generate embeddings for multiple texts efficiently"""
         try:
-            # Ollama embedding endpoint
-            url = f"{self.base_url}/api/embeddings"
-
-            # Process texts in batches to avoid overwhelming the server
-            batch_size = 10
             all_embeddings = []
+            batch_size = 10
+            url = self._build_api_url()
 
             for i in range(0, len(texts), batch_size):
                 batch = texts[i:i + batch_size]
-                batch_embeddings = []
+                payload = self._build_api_payload(batch)
 
-                # Process each text in the batch
-                for text in batch:
-                    payload = {
-                        "model": self.model_name,
-                        "prompt": text
-                    }
+                response = await self.client.post(url, json=payload)
+                response.raise_for_status()
+                result = response.json()
 
-                    response = await self.client.post(url, json=payload)
-                    response.raise_for_status()
+                batch_embeddings_values = await self._extract_embeddings(result, len(batch))
 
-                    result = response.json()
-                    embedding_values = result.get("embedding", [])
-
-                    if not embedding_values:
-                        raise EmbeddingGenerationError(f"No embedding returned for text: {text[:50]}...")
-
-                    embedding = EmbeddingVector(
-                        values=embedding_values,
+                for emb_values in batch_embeddings_values:
+                    emb = EmbeddingVector(
+                        values=emb_values,
                         model_name=self.model_name,
-                        dimensions=len(embedding_values)
+                        dimensions=len(emb_values)
                     )
-                    batch_embeddings.append(embedding)
+                    all_embeddings.append(emb)
 
-                all_embeddings.extend(batch_embeddings)
-
-                # Small delay between batches to be nice to the server
                 if i + batch_size < len(texts):
                     await asyncio.sleep(0.1)
 
@@ -79,8 +106,6 @@ class OllamaEmbeddingService(EmbeddingService):
     def get_model_info(self) -> Dict[str, Any]:
         """Return information about the embedding model"""
         if self._model_info is None:
-            # For mxbai-embed-large, we know the dimensions
-            # In a real implementation, you might query Ollama for this info
             if "mxbai-embed-large" in self.model_name:
                 dimensions = 1024
             elif "nomic-embed-text" in self.model_name:
@@ -88,7 +113,7 @@ class OllamaEmbeddingService(EmbeddingService):
             elif "all-minilm" in self.model_name:
                 dimensions = 384
             else:
-                dimensions = 1024  # Default assumption
+                dimensions = 1024
 
             self._model_info = {
                 "model_name": self.model_name,
