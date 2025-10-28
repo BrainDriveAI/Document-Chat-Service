@@ -64,8 +64,8 @@ class SearchRequestConfig(BaseModel):
     )
 
 
-class ChatMessage(BaseModel):
-    """Chat message format"""
+class ChatHistoryMessage(BaseModel):
+    """Chat history message format"""
     role: str = Field(..., pattern="^(user|assistant)$")
     content: str
 
@@ -74,7 +74,7 @@ class SearchRequest(BaseModel):
     """Search request payload"""
     query_text: str = Field(..., min_length=1, description="Search query")
     collection_id: Optional[str] = Field(None, description="Collection to search in")
-    chat_history: Optional[List[ChatMessage]] = Field(
+    chat_history: Optional[List[ChatHistoryMessage]] = Field(
         default=[],
         description="Conversation history for contextualization"
     )
