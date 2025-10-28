@@ -10,7 +10,7 @@ from ..ports.vector_store import VectorStore
 from ..ports.bm25_service import BM25Service
 from ..ports.rank_fusion_service import RankFusionService
 from .query_transformation import QueryTransformationUseCase
-from .intent_classification import IntentClassificationUseCase, IntentType
+from .intent_classification import IntentClassificationUseCase, IntentKind
 from .collection_summary import CollectionSummaryUseCase
 
 
@@ -90,7 +90,7 @@ class SearchDocumentsUseCase:
             )
             
             # Handle special intents
-            if intent.type == IntentType.CHAT:
+            if intent.kind == IntentKind.CHAT:
                 return {
                     "chunks": [],
                     "intent": intent,
@@ -98,7 +98,7 @@ class SearchDocumentsUseCase:
                     "metadata": {"requires_retrieval": False}
                 }
             
-            if intent.type == IntentType.COLLECTION_SUMMARY and intent.requires_collection_scan:
+            if intent.kind == IntentKind.COLLECTION_SUMMARY and intent.requires_collection_scan:
                 summary = await self.collection_summary_use_case.generate_collection_summary(
                     collection_id=collection_id,
                     query=query_text
