@@ -102,13 +102,15 @@ class DocumentChunkResponse(BaseModel):
     metadata: Optional[Dict[str, Any]]
 
 
-class SearchResponse(BaseModel):
-    """Search response with metadata"""
+class ContextResponse(BaseModel):
+    """
+    Unified context response structure.
+    Always returns the same format regardless of intent.
+    """
     chunks: List[DocumentChunkResponse]
-    intent: Optional[IntentResponse] = None
-    transformed_queries: Optional[List[str]] = None
-    summary: Optional[str] = None  # For collection summary requests
-    message: Optional[str] = None  # For chat intents
+    intent: IntentResponse
+    requires_generation: bool
+    generation_type: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -137,7 +139,7 @@ def to_intent_response(intent: Intent) -> IntentResponse:
     )
 
 
-@router.post("/", response_model=SearchResponse)
+@router.post("/", response_model=ContextResponse)
 async def search_documents(
     req: SearchRequest,
     use_case: SearchDocumentsUseCase = Depends(get_search_documents_use_case)
@@ -182,12 +184,11 @@ async def search_documents(
         )
         
         # Build response
-        response = SearchResponse(
+        response = ContextResponse(
             chunks=[to_chunk_response(chunk) for chunk in result.get("chunks", [])],
             intent=to_intent_response(result["intent"]) if result.get("intent") else None,
-            transformed_queries=result.get("transformed_queries"),
-            summary=result.get("summary"),
-            message=result.get("message"),
+            requires_generation=result.get("requires_generation"),
+            generation_type=result.get("generation_type"),
             metadata=result.get("metadata", {})
         )
         
