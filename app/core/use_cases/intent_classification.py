@@ -2,32 +2,9 @@ import re
 import json
 from typing import Dict, List, Optional
 
-from ..domain.entities.context_intent_type import IntentType
+from ..domain.entities.search_intent import IntentKind, Intent
 from ..ports.llm_service import LLMService
-from ..domain.exceptions import DomainException
-
-
-class Intent:
-    """Represents the classified intent of a user query"""
-    
-    def __init__(
-        self,
-        intent_type: IntentType,
-        requires_retrieval: bool,
-        requires_collection_scan: bool = False,
-        confidence: float = 1.0,
-        reasoning: str = ""
-    ):
-        self.type = intent_type
-        self.requires_retrieval = requires_retrieval
-        self.requires_collection_scan = requires_collection_scan
-        self.confidence = confidence
-        self.reasoning = reasoning
-
-
-class IntentClassificationError(DomainException):
-    """Error during intent classification"""
-    pass
+from ..domain.exceptions import IntentClassificationError
 
 
 class IntentClassificationUseCase:
@@ -73,14 +50,14 @@ class IntentClassificationUseCase:
             # Quick heuristic checks first (faster)
             if self._is_chat_intent(query):
                 return Intent(
-                    intent_type=IntentType.CHAT,
+                    intent_kind=IntentKind.CHAT,
                     requires_retrieval=False,
                     reasoning="Detected as general conversation"
                 )
             
             if self._is_collection_summary_intent(query):
                 return Intent(
-                    intent_type=IntentType.COLLECTION_SUMMARY,
+                    intent_kind=IntentKind.COLLECTION_SUMMARY,
                     requires_retrieval=True,
                     requires_collection_scan=True,
                     reasoning="Detected as collection-level summary request"
@@ -92,7 +69,7 @@ class IntentClassificationUseCase:
         except Exception as e:
             # Fallback to safe default: assume retrieval needed
             return Intent(
-                intent_type=IntentType.RETRIEVAL,
+                intent_kind=IntentKind.RETRIEVAL,
                 requires_retrieval=True,
                 confidence=0.5,
                 reasoning=f"Classification error, defaulting to retrieval: {str(e)}"
@@ -163,7 +140,7 @@ Respond in JSON format:
             # Parse JSON response
             result = self._parse_json_response(response)
             
-            intent_type = IntentType(result["intent"].lower())
+            intent_type = IntentKind(result["intent"].lower())
             
             return Intent(
                 intent_type=intent_type,
@@ -175,7 +152,7 @@ Respond in JSON format:
         except Exception as e:
             # Fallback
             return Intent(
-                intent_type=IntentType.RETRIEVAL,
+                intent_kind=IntentKind.RETRIEVAL,
                 requires_retrieval=True,
                 confidence=0.5,
                 reasoning=f"LLM classification failed: {str(e)}"
