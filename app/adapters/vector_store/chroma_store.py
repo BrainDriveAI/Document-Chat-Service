@@ -389,9 +389,23 @@ class ChromaVectorStoreAdapter(VectorStore):
 
         # Iterate over results; ChromaDB returns a flat list for documents and metadata
         for idx, chunk_id in enumerate(ids_list):
-            metadata = metadatas_list[idx] if metadatas_list and metadatas_list[idx] else {}
-            content = documents_list[idx] if documents_list and documents_list[idx] else ""
-            embeddings = embeddings_list[idx] if embeddings_list and embeddings_list[idx] else None
+            # FIX: Proper empty checks for metadata and content
+            metadata = {}
+            if metadatas_list is not None and len(metadatas_list) > idx and metadatas_list[idx]:
+                metadata = metadatas_list[idx]
+            
+            content = ""
+            if documents_list is not None and len(documents_list) > idx and documents_list[idx]:
+                content = documents_list[idx]
+            
+            # FIX: Proper embedding check - avoid ambiguous truthiness
+            embeddings = None
+            if embeddings_list is not None and len(embeddings_list) > 0:
+                if idx < len(embeddings_list):
+                    embedding_value = embeddings_list[idx]
+                    # Check if it's a valid embedding (not None and has length)
+                    if embedding_value is not None and len(embedding_value) > 0:
+                        embeddings = embedding_value
 
             document_id = metadata.get("document_id")
             coll_id = metadata.get("collection_id")
