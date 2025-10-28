@@ -131,7 +131,7 @@ def to_chunk_response(chunk: DocumentChunk) -> DocumentChunkResponse:
 def to_intent_response(intent: Intent) -> IntentResponse:
     """Convert Intent to API response"""
     return IntentResponse(
-        type=intent.type.value,
+        type=intent.kind.value,
         requires_retrieval=intent.requires_retrieval,
         requires_collection_scan=intent.requires_collection_scan,
         confidence=intent.confidence,
@@ -185,11 +185,11 @@ async def search_documents(
         
         # Build response
         response = ContextResponse(
-            chunks=[to_chunk_response(chunk) for chunk in result.get("chunks", [])],
-            intent=to_intent_response(result["intent"]) if result.get("intent") else None,
-            requires_generation=result.get("requires_generation"),
-            generation_type=result.get("generation_type"),
-            metadata=result.get("metadata", {})
+            chunks=[to_chunk_response(chunk) for chunk in result.chunks],
+            intent=to_intent_response(result.intent) if result.intent else None,
+            requires_generation=result.requires_generation,
+            generation_type=result.generation_type.value if result.generation_type else "",
+            metadata=result.metadata
         )
         
         return response
@@ -197,6 +197,8 @@ async def search_documents(
     except Exception as e:
         # Log the error
         print(f"Search failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"
