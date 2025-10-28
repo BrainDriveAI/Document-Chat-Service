@@ -33,6 +33,7 @@ from ..core.use_cases.chat_interaction import ChatInteractionUseCase
 from ..core.use_cases.query_transformation import QueryTransformationUseCase
 from ..core.use_cases.intent_classification import IntentClassificationUseCase
 from ..core.use_cases.collection_summary import CollectionSummaryUseCase
+from ..core.use_cases.context_retrieval import ContextRetrievalUseCase
 
 
 # Dependency provider functions
@@ -218,6 +219,26 @@ def get_search_documents_use_case(
     collection_summary_use_case: CollectionSummaryUseCase = Depends(get_collection_summary_use_case),
 ) -> SearchDocumentsUseCase:
     return SearchDocumentsUseCase(
+        embedding_service=embedding_service,
+        vector_store=vector_store,
+        bm25_service=bm25_service,
+        rank_fusion_service=rank_fusion_service,
+        query_transformation_use_case=query_transformation_use_case,
+        intent_classification_use_case=intent_classification_use_case,
+        collection_summary_use_case=collection_summary_use_case,
+    )
+
+def get_context_retrieval_use_case(
+    embedding_service: EmbeddingService = Depends(get_embedding_service),
+    vector_store: VectorStore = Depends(get_vector_store),
+    bm25_service: BM25Service = Depends(get_bm25_service),
+    rank_fusion_service: RankFusionService = Depends(get_rank_fusion_service),
+    query_transformation_use_case: QueryTransformationUseCase = Depends(get_query_transformation_use_case),
+    intent_classification_use_case: IntentClassificationUseCase = Depends(get_intent_classification_use_case),
+    collection_summary_use_case: CollectionSummaryUseCase = Depends(get_collection_summary_use_case),
+) -> ContextRetrievalUseCase:
+    """Get context retrieval use case - the main entry point for context retrieval"""
+    return ContextRetrievalUseCase(
         embedding_service=embedding_service,
         vector_store=vector_store,
         bm25_service=bm25_service,
