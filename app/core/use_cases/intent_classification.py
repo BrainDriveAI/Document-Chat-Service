@@ -1,23 +1,10 @@
-# app/core/use_cases/intent_classification.py
-
 import re
 import json
 from typing import Dict, List, Optional
-from enum import Enum
 
+from ..domain.entities.context_intent_type import IntentType
 from ..ports.llm_service import LLMService
 from ..domain.exceptions import DomainException
-
-
-class IntentType(Enum):
-    """Types of user intents"""
-    RETRIEVAL = "retrieval"  # Search for specific information
-    SUMMARY = "summary"  # Summarize document(s) or collection
-    CLARIFICATION = "clarification"  # Follow-up question about previous answer
-    CHAT = "chat"  # General conversation, no retrieval needed
-    COMPARISON = "comparison"  # Compare multiple concepts
-    LISTING = "listing"  # List items/features/etc
-    COLLECTION_SUMMARY = "collection_summary"  # Summary of entire collection
 
 
 class Intent:
