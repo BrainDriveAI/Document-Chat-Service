@@ -210,13 +210,14 @@ async def example_complex_conversation():
             }
         }
     }
+
+    response2 = await call_api(request2)
+    result2 = response2.json()
     
-    async with httpx.AsyncClient() as client:
-        response2 = await client.post(f"{BASE_URL}/search/", json=request2)
-        result2 = response2.json()
-        
-        print("\n=== Turn 2 ===")
-        print(f"Query: {request2['query_text']}")
+    print("\n=== Turn 2 ===")
+    print(f"Query: {request2['query_text']}")
+    print(f"Intent: {result2['intent']['type']}")
+    print(f"Chunks found: {len(result2['chunks'])}")
 
 
 EXAMPLES = {
@@ -234,8 +235,8 @@ ENABLED_EXAMPLES = {
     "basic_search": False,
     "conversational_search": False,
     "hyde_search": False,
-    "collection_summary": False,
-    "complex_conversation": True,
+    "collection_summary": True,
+    "complex_conversation": False,
 }
 
 
