@@ -1,5 +1,4 @@
 from typing import List, Optional
-
 from ..domain.entities.document_chunk import DocumentChunk
 from ..ports.vector_store import VectorStore
 from ..ports.llm_service import LLMService
@@ -23,8 +22,8 @@ class CollectionSummaryUseCase:
     ):
         self.vector_store = vector_store
         self.llm_service = llm_service
-        self.clustering_service = clustering_service  # <-- Store the service
-
+        self.clustering_service = clustering_service
+    
     async def generate_collection_summary(
         self,
         collection_id: str,
@@ -56,7 +55,8 @@ class CollectionSummaryUseCase:
                 sample_size=sample_size
             )
             
-            if not sample_chunks:
+            # FIX: Proper empty check
+            if not sample_chunks or len(sample_chunks) == 0:
                 return "No documents found in this collection."
             
             # Build context from samples
@@ -80,43 +80,36 @@ class CollectionSummaryUseCase:
     ) -> List[DocumentChunk]:
         """
         Get diverse representative chunks from collection using the ClusteringService.
+        All fallback logic is handled by the clustering service adapter.
         """
-        try:
-            # 1. Get all chunks from collection (with embeddings)
-            # Note: This might need pagination for very large collections
-            all_chunks = await self.vector_store.get_all_chunks_in_collection(
-                collection_id=collection_id,
-                limit=1000  # Reasonable limit to avoid memory issues
-            )
-            
-            if not all_chunks:
-                return []
-            
-            # 2. If we have fewer chunks than sample size, return all
-            # (The adapter also handles this, but this is a cheap check)
-            if len(all_chunks) <= sample_size:
-                return all_chunks
-
-            # 3. Delegate clustering and sampling to the adapter
-            # The adapter itself handles logic for missing embeddings
-            sampled_chunks = await self.clustering_service.get_diverse_representatives(
-                chunks_with_embeddings=all_chunks,
-                k=sample_size
-            )
-            
-            return sampled_chunks
-            
-        except Exception as e:
-            print(f"Error in diverse sampling, falling back to random: {e}")
-            # Fallback: random sample (same as original)
-            import random
-            all_chunks_fallback = await self.vector_store.get_all_chunks_in_collection(
-                collection_id=collection_id,
-                limit=sample_size * 2
-            )
-            if not all_chunks_fallback:
-                return []
-            return random.sample(all_chunks_fallback, min(sample_size, len(all_chunks_fallback)))
+        # 1. Get all chunks from collection (with embeddings)
+        print(f"Fetching chunks for collection: {collection_id}")
+        all_chunks = await self.vector_store.get_all_chunks_in_collection(
+            collection_id=collection_id,
+            limit=1000  # Reasonable limit to avoid memory issues
+        )
+        
+        print(f"Retrieved {len(all_chunks) if all_chunks else 0} chunks from vector store")
+        
+        # 2. Check if we got any chunks
+        if not all_chunks or len(all_chunks) == 0:
+            print("No chunks found in collection")
+            return []
+        
+        # 3. If we have fewer chunks than sample size, return all
+        if len(all_chunks) <= sample_size:
+            print(f"Returning all {len(all_chunks)} chunks (less than sample_size)")
+            return all_chunks
+        
+        # 4. Delegate to clustering service (handles all strategies and fallbacks)
+        print(f"Delegating to clustering service: {len(all_chunks)} chunks → {sample_size} representatives")
+        sampled_chunks = await self.clustering_service.get_diverse_representatives(
+            chunks_with_embeddings=all_chunks,
+            k=sample_size
+        )
+        
+        print(f"Clustering service returned {len(sampled_chunks)} representative chunks")
+        return sampled_chunks
     
     def _build_context(
         self,
@@ -147,7 +140,8 @@ class CollectionSummaryUseCase:
         """Generate a general overview summary of the collection"""
         
         prompt = f"""
-            Based on the following excerpts from a document collection, provide a comprehensive summary that covers:
+            Based on the following excerpts from a document collection,
+            provide a comprehensive summary that covers:
 
             1. Main topics and themes covered in the collection
             2. Key concepts or subjects discussed
@@ -175,11 +169,13 @@ class CollectionSummaryUseCase:
         """Generate a summary focused on answering a specific question"""
         
         prompt = f"""
-            Based on the following excerpts from a document collection, answer this question about the collection:
+            Based on the following excerpts from a document collection,
+            answer this question about the collection:
 
             Question: {query}
 
-            Provide a comprehensive answer based on the excerpts. If the excerpts don't fully answer the question, note what information is available.
+            Provide a comprehensive answer based on the excerpts.
+            If the excerpts don't fully answer the question, note what information is available.
 
             Document Excerpts:
             {context}
