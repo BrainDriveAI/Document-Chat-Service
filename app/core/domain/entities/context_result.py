@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 
 from .document_chunk import DocumentChunk
-from .search_intent import IntentType
+from .search_intent import Intent
 
 
 class GenerationType(Enum):
@@ -22,13 +22,13 @@ class ContextResult:
     Always returns the same structure regardless of intent.
     """
     chunks: List[DocumentChunk]
-    intent: IntentType
+    intent: Intent
     requires_generation: bool
     generation_type: GenerationType
     metadata: Dict[str, Any]
     
     @classmethod
-    def create_chat_result(cls, intent: IntentType) -> "ContextResult":
+    def create_chat_result(cls, intent: Intent) -> "ContextResult":
         """Factory method for chat intents (no context needed)"""
         return cls(
             chunks=[],
@@ -44,7 +44,7 @@ class ContextResult:
     def create_retrieval_result(
         cls,
         chunks: List[DocumentChunk],
-        intent: IntentType,
+        intent: Intent,
         generation_type: GenerationType,
         metadata: Optional[Dict[str, Any]] = None
     ) -> "ContextResult":
@@ -74,7 +74,7 @@ class ContextResult:
                 for chunk in self.chunks
             ],
             "intent": {
-                "type": self.intent.type.value,
+                "kind": self.intent.kind.value,
                 "requires_retrieval": self.intent.requires_retrieval,
                 "requires_collection_scan": self.intent.requires_collection_scan,
                 "confidence": self.intent.confidence,
