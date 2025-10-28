@@ -80,3 +80,9 @@ class TokenizationError(DomainException):
 class CollectionSummaryError(DomainException):
     """Error during collection summary generation"""
     pass
+
+
+class IntentClassificationError(DomainException):
+    """Error during intent classification"""
+    pass
+
