@@ -100,10 +100,10 @@ class ContextRetrievalUseCase:
             )
         
         # Step 2: Route based on intent
-        if intent.type == IntentKind.CHAT:
+        if intent.kind == IntentKind.CHAT:
             return ContextResult.create_chat_result(intent)
         
-        elif intent.type == IntentKind.COLLECTION_SUMMARY or intent.requires_collection_scan:
+        elif intent.kind == IntentKind.COLLECTION_SUMMARY or intent.requires_collection_scan:
             return await self._handle_collection_summary_intent(
                 query_text=query_text,
                 collection_id=collection_id,
@@ -131,7 +131,7 @@ class ContextRetrievalUseCase:
         self,
         query_text: str,
         collection_id: str,
-        intent,
+        intent: Intent,
         sample_size: int
     ) -> ContextResult:
         """
@@ -165,7 +165,7 @@ class ContextRetrievalUseCase:
         filters: Optional[Dict],
         use_hybrid: bool,
         alpha: float,
-        intent,
+        intent: Intent,
         query_transformation_enabled: bool,
         query_transformation_methods: Optional[List[QueryTransformationMethod]],
         max_history_turns: int
@@ -205,7 +205,7 @@ class ContextRetrievalUseCase:
             )
         
         # Step 3: Determine generation type based on intent
-        generation_type = self._map_intent_to_generation_type(intent.type)
+        generation_type = self._map_intent_to_generation_type(intent.kind)
         
         return ContextResult.create_retrieval_result(
             chunks=chunks,
@@ -226,6 +226,7 @@ class ContextRetrievalUseCase:
             IntentKind.RETRIEVAL: GenerationType.ANSWER,
             IntentKind.CLARIFICATION: GenerationType.ANSWER,
             IntentKind.SUMMARY: GenerationType.SUMMARY,
+            IntentKind.COLLECTION_SUMMARY: GenerationType.SUMMARY,
             IntentKind.COMPARISON: GenerationType.COMPARISON,
             IntentKind.LISTING: GenerationType.LISTING,
         }
