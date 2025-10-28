@@ -75,3 +75,8 @@ class ChatSessionProcessingError(DomainException):
 class TokenizationError(DomainException):
     """Raised when tokenization fails"""
     pass
+
+
+class CollectionSummaryError(DomainException):
+    """Error during collection summary generation"""
+    pass

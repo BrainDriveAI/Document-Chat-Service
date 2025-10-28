@@ -3,12 +3,7 @@ from ..domain.entities.document_chunk import DocumentChunk
 from ..ports.vector_store import VectorStore
 from ..ports.llm_service import LLMService
 from ..ports.clustering_service import ClusteringService
-from ..domain.exceptions import DomainException
-
-
-class CollectionSummaryError(DomainException):
-    """Error during collection summary generation"""
-    pass
+from ..domain.exceptions import CollectionSummaryError
 
 
 class CollectionSummaryUseCase:
