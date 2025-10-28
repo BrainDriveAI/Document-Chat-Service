@@ -4,11 +4,11 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ...api.deps import get_search_documents_use_case
-from ...core.use_cases.search_documents import SearchDocumentsUseCase
+from ...api.deps import get_context_retrieval_use_case
+from ...core.use_cases.context_retrieval import ContextRetrievalUseCase
 from ...core.domain.entities.document_chunk import DocumentChunk
 from ...core.domain.entities.query_transformation import QueryTransformationMethod
-from ...core.use_cases.intent_classification import Intent, IntentType
+from ...core.domain.entities.search_intent import Intent
 
 router = APIRouter()
 
@@ -142,7 +142,7 @@ def to_intent_response(intent: Intent) -> IntentResponse:
 @router.post("/", response_model=ContextResponse)
 async def search_documents(
     req: SearchRequest,
-    use_case: SearchDocumentsUseCase = Depends(get_search_documents_use_case)
+    use_case: ContextRetrievalUseCase = Depends(get_context_retrieval_use_case)
 ):
     """
     Search for relevant document chunks with intelligent query processing.
@@ -169,7 +169,7 @@ async def search_documents(
             transformation_methods = req.config.query_transformation.methods
         
         # Execute search
-        result = await use_case.search_documents(
+        result = await use_case.retrieve_context(
             query_text=req.query_text,
             collection_id=req.collection_id,
             chat_history=chat_history_dicts if req.config.use_chat_history else None,
