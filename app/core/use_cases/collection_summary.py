@@ -18,6 +18,32 @@ class CollectionSummaryUseCase:
         self.vector_store = vector_store
         self.llm_service = llm_service
         self.clustering_service = clustering_service
+
+    async def get_sample_chunks(
+        self,
+        collection_id: str,
+        sample_size: int = 20,
+    ) -> List[DocumentChunk]:
+        """
+        Get diverse representative chunks from a collection.
+        
+        Args:
+            collection_id: ID of collection
+            sample_size: Number of representative chunks to return
+            
+        Returns:
+            List of diverse document chunks
+        """
+        try:
+            sample_chunks = await self._get_diverse_sample(
+                collection_id=collection_id,
+                sample_size=sample_size
+            )
+            
+            return sample_chunks
+            
+        except Exception as e:
+            raise CollectionSummaryError(f"Failed to get collection sample: {str(e)}")
     
     async def generate_collection_summary(
         self,
@@ -25,7 +51,6 @@ class CollectionSummaryUseCase:
         query: Optional[str] = None,
         sample_size: int = 20,
         max_context_chars: int = 8000,
-        generate_summary: Optional[bool] = False,
     ) -> List[DocumentChunk]:
         """
         Generate a summary of an entire collection.
@@ -55,17 +80,16 @@ class CollectionSummaryUseCase:
             if not sample_chunks or len(sample_chunks) == 0:
                 return "No documents found in this collection."
             
-            # Generate summary
-            summary = ""
-            if generate_summary:
-                # Build context from samples
-                context = self._build_context(sample_chunks, max_context_chars)
-                if query:
-                    summary = await self._generate_targeted_summary(context, query)
-                else:
-                    summary = await self._generate_general_summary(context, collection_id)
+            # Build context from samples
+            context = self._build_context(sample_chunks, max_context_chars)
             
-            return sample_chunks
+            # Generate summary
+            if query:
+                summary = await self._generate_targeted_summary(context, query)
+            else:
+                summary = await self._generate_general_summary(context, collection_id)
+            
+            return summary
             
         except Exception as e:
             raise CollectionSummaryError(f"Failed to generate collection summary: {str(e)}")
