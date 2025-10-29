@@ -27,7 +27,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     aiofiles==24.1.0 \
     prometheus-client==0.22.1 \
     python-dotenv==1.1.0 \
-    pydantic_settings==2.9.1
+    pydantic_settings==2.9.1 \
+    posthog==5.3.0
 
 
 # Install ML/NLP dependencies (heavier packages)
