@@ -65,7 +65,7 @@ def get_llm_service(request: Request) -> LLMService:
 
 def get_contextual_llm_service(request: Request) -> LLMService:
     llm = getattr(request.app.state, "contextual_llm_service", None)
-    if llm is None:
+    if settings.ENABLE_CONTEXTUAL_RETRIEVAL and llm is None:
         raise HTTPException(status_code=500, detail="Contextual LLMService not initialized")
     return llm
 
