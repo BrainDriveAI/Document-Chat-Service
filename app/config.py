@@ -12,6 +12,14 @@ class CriticalConfigError(Exception):
 
 
 class AppSettings(BaseSettings):
+    # Pydantic model configuration
+    model_config = {
+        'extra': 'ignore',
+        'env_file': '.env',
+        'env_file_encoding': 'utf-8',
+        'validate_default': True,
+    }
+
     # spaCy
     SPACY_MODEL: str = Field("en_core_web_sm", env="SPACY_MODEL")
 
@@ -22,7 +30,11 @@ class AppSettings(BaseSettings):
         env='LLM_PROVIDER',
         description="Which LLM provider to use: openai, ollama, openrouter, or groq."
     )
-    LLM_TIMEOUT: int = Field(120, env="LLM_TIMEOUT")
+    LLM_TIMEOUT: Optional[int] = Field(
+        default=300,
+        env="LLM_TIMEOUT",
+        description="LLM API Requests Timeout Config."
+    )
 
     # -- Embedding provider selection --
     EMBEDDING_PROVIDER: Literal['openai', 'pinecone', 'ollama'] = Field(
@@ -30,24 +42,67 @@ class AppSettings(BaseSettings):
         env='EMBEDDING_PROVIDER',
         description="Which embedding provider to use: openai, pinecone, or ollama."
     )
-    EMBEDDING_TIMEOUT: int = Field(30, env="EMBEDDING_TIMEOUT")
+
+    # EMBEDDING OPTIMIZATIONS
+    EMBEDDING_BATCH_SIZE: Optional[int] = Field(
+        default=4,  # Start even smaller - 4 instead of 8
+        env="EMBEDDING_BATCH_SIZE",
+        description="Number of texts to embed in one API call. Lower = less memory."
+    )
+    
+    EMBEDDING_CONCURRENCY: Optional[int] = Field(
+        default=1,  # Process one batch at a time to avoid memory spikes
+        env="EMBEDDING_CONCURRENCY",
+        description="Number of concurrent batch requests. 1 = sequential processing.",
+    )
+    
+    EMBEDDING_TIMEOUT: Optional[int] = Field(
+        default=120,  # Reduced from 300 - fail faster
+        env="EMBEDDING_TIMEOUT",
+        description="Timeout per embedding request (seconds)."
+    )
+    
+    # Add retry configuration for embeddings
+    EMBEDDING_MAX_RETRIES: Optional[int] = Field(
+        default=3,
+        env="EMBEDDING_MAX_RETRIES",
+        description="Max retries for failed embedding requests."
+    )
+    
+    EMBEDDING_RETRY_DELAY: Optional[float] = Field(
+        default=2.0,
+        env="EMBEDDING_RETRY_DELAY", 
+        description="Delay between embedding retries (seconds)."
+    )
 
     # Contextual Retrieval
-    ENABLE_CONTEXTUAL_RETRIEVAL: Optional[bool] = Field(default=True, description="Enable Contextual Retrieval.")
-    OLLAMA_CONTEXTUAL_LLM_BASE_URL: Optional[HttpUrl] = Field(default='http://localhost:11434',
-                                                   description="Ollama LLM base URL for contextual retrieval.")
-    OLLAMA_CONTEXTUAL_LLM_MODEL: Optional[str] = Field(default=None, description="Ollama LLM model for contextual retrieval.")
+    ENABLE_CONTEXTUAL_RETRIEVAL: Optional[bool] = Field(
+        default=True,
+        env='ENABLE_CONTEXTUAL_RETRIEVAL',
+        description="Enable Contextual Retrieval."
+    )
+    OLLAMA_CONTEXTUAL_LLM_BASE_URL: Optional[HttpUrl] = Field(
+        default='http://localhost:11434',
+        env='OLLAMA_CONTEXTUAL_LLM_BASE_URL',
+        description="Ollama LLM base URL for contextual retrieval."
+    )
+    OLLAMA_CONTEXTUAL_LLM_MODEL: Optional[str] = Field(
+        default=None,
+        env='OLLAMA_CONTEXTUAL_LLM_MODEL',
+        description="Ollama LLM model for contextual retrieval."
+    )
 
+    # CONTEXTUAL RETRIEVAL OPTIMIZATIONS
     CONTEXTUAL_BATCH_SIZE: Optional[int] = Field(
-        default=5,
+        default=2,
         description="Batch size for contextual processing."
     )
     CONTEXTUAL_CHUNK_TIMEOUT: Optional[int] = Field(
-        default=60,
+        default=90,
         description="Timeout in seconds for contextual batch processing."
     )
     CONTEXTUAL_DOC_MAX_LENGTH: Optional[int] = Field(
-        default=8000,
+        default=4000,
         description="Contextual processing prompt length."
     )
 
@@ -56,13 +111,38 @@ class AppSettings(BaseSettings):
     GROQ_LLM_MODEL: Optional[str] = Field(default="llama3-70b-8192", description="The Groq LLM model to be used.")
 
     # Ollama
-    OLLAMA_LLM_BASE_URL: Optional[HttpUrl] = Field(default='http://localhost:11434',
-                                                   description="Ollama LLM base URL if self-hosted and not using the default.")
-    OLLAMA_LLM_MODEL: Optional[str] = Field(default=None, description="Ollama LLM model.")
+    OLLAMA_LLM_BASE_URL: Optional[HttpUrl] = Field(
+        default='http://localhost:11434',
+        env='OLLAMA_LLM_BASE_URL',
+        description="Ollama LLM base URL."
+    )
+    OLLAMA_LLM_MODEL: Optional[str] = Field(
+        default=None,
+        env='OLLAMA_LLM_MODEL',
+        description="Ollama LLM model."
+    )
 
-    OLLAMA_EMBEDDING_BASE_URL: str = Field(default='http://localhost:11434', env='EMBEDDING_BASE_URL', description='Ollama Embedding base URL if self-hosted and not using the default.')
-    OLLAMA_EMBEDDING_MODEL: Optional[str] = Field(default="mxbai-embed-large",
-                                                  description="The Ollama embedding model to be used.")
+    OLLAMA_EMBEDDING_BASE_URL: Optional[HttpUrl] = Field(
+        default='http://localhost:11434',
+        env='OLLAMA_EMBEDDING_BASE_URL',
+        description='Ollama Embedding base URL.'
+    )
+    OLLAMA_EMBEDDING_MODEL: Optional[str] = Field(
+        default="mxbai-embed-large",
+        env='OLLAMA_EMBEDDING_MODEL',
+        description="The Ollama embedding model to be used."
+    )
+    EMBEDDING_BATCH_SIZE: Optional[int] = Field(
+        default=8,
+        env="EMBEDDING_BATCH_SIZE",
+        description="Embedding batch size."
+    )
+
+    EMBEDDING_CONCURRENCY: Optional[int] = Field(
+        default=2,
+        env="EMBEDDING_CONCURRENCY",
+        description="Embedding concurrency.",
+    )
 
     # Vector store (Chroma)
     CHROMA_PERSIST_DIR: str = Field("./data/vector_db", env="CHROMA_PERSIST_DIR")
@@ -85,19 +165,31 @@ class AppSettings(BaseSettings):
     UPLOAD_MAX_FILE_SIZE: Optional[int] = None
 
     # Document Processor API Configuration
-    DOCUMENT_PROCESSOR_API_URL: Optional[HttpUrl] = Field(default=None, description="Document processor API URL")
-    DOCUMENT_PROCESSOR_API_KEY: Optional[SecretStr] = Field(default=None, description="Your Document Processing API Key.")
-    DOCUMENT_PROCESSOR_TIMEOUT: int = 300 
-    DOCUMENT_PROCESSOR_MAX_RETRIES: int = 3
+    DOCUMENT_PROCESSOR_API_URL: Optional[HttpUrl] = Field(
+        default='http://host.docker.internal:8080/documents/',
+        env='DOCUMENT_PROCESSOR_API_URL',
+        description="Document processor API URL"
+    )
+    DOCUMENT_PROCESSOR_API_KEY: Optional[SecretStr] = Field(
+        default=None,
+        env='DOCUMENT_PROCESSOR_API_KEY',
+        description="Your Document Processing API Key."
+    )
+    DOCUMENT_PROCESSOR_TIMEOUT: Optional[int] = Field(
+        default=300,
+        env='DOCUMENT_PROCESSOR_TIMEOUT',
+        description="Document Processing Timeout Config."
+    ) 
+    DOCUMENT_PROCESSOR_MAX_RETRIES: Optional[int] = Field(
+        default=3,
+        env='DOCUMENT_PROCESSOR_MAX_RETRIES',
+        description="Document Processing Max Retry Config."
+    )
 
     # FastAPI settings
     API_HOST: str = Field("0.0.0.0", env="API_HOST")
     API_PORT: int = Field(8000, env="API_PORT")
     DEBUG: bool = Field(False, env="DEBUG")
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 # Instantiate settings. This will load, validate, and expose the settings.
