@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: chat-with-docs-app
+    container_name: chat-with-docs-app-local
     env_file:
       - .env
     ports:
@@ -24,15 +24,18 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-ollama}
       - ENABLE_CONTEXTUAL_RETRIEVAL=${ENABLE_CONTEXTUAL_RETRIEVAL:-true}
-      - OLLAMA_CONTEXTUAL_LLM_BASE_URL=${OLLAMA_CONTEXTUAL_LLM_BASE_URL:-http://localhost:11434}
-      - OLLAMA_CONTEXTUAL_LLM_MODEL=${OLLAMA_CONTEXTUAL_LLM_MODEL:-llama3.2}
-      - OLLAMA_LLM_BASE_URL=${OLLAMA_LLM_BASE_URL:-http://localhost:11434}
-      - OLLAMA_LLM_MODEL=${OLLAMA_LLM_MODEL:-qwen3}
-      - OLLAMA_EMBEDDING_BASE_URL=${OLLAMA_EMBEDDING_BASE_URL:-http://localhost:11434}
+      - OLLAMA_CONTEXTUAL_LLM_BASE_URL=${OLLAMA_CONTEXTUAL_LLM_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_CONTEXTUAL_LLM_MODEL=${OLLAMA_CONTEXTUAL_LLM_MODEL:-gemma3:1b}
+      - OLLAMA_LLM_BASE_URL=${OLLAMA_LLM_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_LLM_MODEL=${OLLAMA_LLM_MODEL:-gemma3:1b}
+      - OLLAMA_EMBEDDING_BASE_URL=${OLLAMA_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-mxbai-embed-large}
       - DOCUMENT_PROCESSOR_API_URL=${DOCUMENT_PROCESSOR_API_URL:-http://host.docker.internal:8080/documents/}
       - DOCUMENT_PROCESSOR_API_KEY=${DOCUMENT_PROCESSOR_API_KEY:-default_api_key}
       - DOCUMENT_PROCESSOR_TIMEOUT=${DOCUMENT_PROCESSOR_TIMEOUT:-600}
       - DOCUMENT_PROCESSOR_MAX_RETRIES=${DOCUMENT_PROCESSOR_MAX_RETRIES:-3}
+      - CHROMA_TELEMETRY=0
+      - SCARF_NO_ANALYTICS=true
+      - DO_NOT_TRACK=true
+      - ANONYMIZED_TELEMETRY=false
     restart: unless-stopped
-  

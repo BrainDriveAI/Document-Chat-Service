@@ -1,16 +1,13 @@
 import os
 import logging
-import asyncio
-import uvicorn
 import logging
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 # Import our middleware
 from fastapi.middleware.cors import CORSMiddleware
-from .infrastructure.multipart_limit_middleware import MultipartLimitMiddleware
 from .infrastructure.logging import setup_logging, RequestLoggingMiddleware
 from .infrastructure.metrics import PrometheusMiddleware, metrics_endpoint
 
@@ -20,7 +17,6 @@ from .config import settings
 from .adapters.document_processing.chunking_strategies import OptimizedHierarchicalChunkingStrategy
 from .adapters.token_service.tiktoken_service import TikTokenService
 from .adapters.storage.local_storage import LocalStorageService
-# from .adapters.document_processing.simple_spacy_layout import SimpleSpacyLayoutProcessor
 from .adapters.document_processing.remote_document_processor import RemoteDocumentProcessor
 from .adapters.embedding.ollama_embedding import OllamaEmbeddingService
 from .adapters.llm.ollama_llm import OllamaLLMService
@@ -48,14 +44,6 @@ app = FastAPI(
 # Setup logging early
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Add Multipart limit middleware with, e.g., 50 MiB limit. Adjust as needed.
-# app.add_middleware(
-#     MultipartLimitMiddleware,
-#     max_part_size=settings.UPLOAD_MAX_PART_SIZE,
-#     max_fields=settings.UPLOAD_MAX_FIELDS,
-#     max_file_size=settings.UPLOAD_MAX_FILE_SIZE
-# )
 
 # Add request logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -100,6 +88,15 @@ async def on_startup():
 
     print(f"Setting: {settings}")
 
+    # Log configuration for debugging
+    logger.info(f"Embedding configuration:")
+    logger.info(f"  - Provider: {settings.EMBEDDING_PROVIDER}")
+    logger.info(f"  - Model: {settings.OLLAMA_EMBEDDING_MODEL}")
+    logger.info(f"  - Base URL: {settings.OLLAMA_EMBEDDING_BASE_URL}")
+    logger.info(f"  - Batch size: {settings.EMBEDDING_BATCH_SIZE}")
+    logger.info(f"  - Concurrency: {settings.EMBEDDING_CONCURRENCY}")
+    logger.info(f"  - Timeout: {settings.EMBEDDING_TIMEOUT}s")
+
     # Storage service
     storage_service = LocalStorageService()
     app.state.storage_service = storage_service
@@ -111,10 +108,6 @@ async def on_startup():
     chunking_strategy = OptimizedHierarchicalChunkingStrategy(token_service)
 
     # Document processor
-    # app.state.document_processor = SimpleSpacyLayoutProcessor(
-    #     spacy_model=settings.SPACY_MODEL,
-    #     token_service=token_service,
-    # )
     if settings.DOCUMENT_PROCESSOR_API_KEY:
         document_processor_api_key = settings.DOCUMENT_PROCESSOR_API_KEY.get_secret_value()
     else:
@@ -122,8 +115,8 @@ async def on_startup():
     app.state.document_processor = RemoteDocumentProcessor(
         api_base_url=str(settings.DOCUMENT_PROCESSOR_API_URL),
         storage_service=storage_service,
-        timeout=300,
-        max_retries=3,
+        timeout=settings.DOCUMENT_PROCESSOR_TIMEOUT,
+        max_retries=settings.DOCUMENT_PROCESSOR_MAX_RETRIES,
         api_key=document_processor_api_key
     )
 
@@ -131,8 +124,17 @@ async def on_startup():
     if settings.EMBEDDING_PROVIDER.lower() == "ollama":
         app.state.embedding_service = OllamaEmbeddingService(
             base_url=str(settings.OLLAMA_EMBEDDING_BASE_URL),
-            model_name=settings.OLLAMA_EMBEDDING_MODEL,
-            timeout=settings.EMBEDDING_TIMEOUT
+            model_name=str(settings.OLLAMA_EMBEDDING_MODEL),
+            timeout=int(settings.EMBEDDING_TIMEOUT) if settings.EMBEDDING_TIMEOUT else 120,
+            batch_size=int(settings.EMBEDDING_BATCH_SIZE) if settings.EMBEDDING_BATCH_SIZE else 4,
+            concurrency_limit=int(settings.EMBEDDING_CONCURRENCY) if settings.EMBEDDING_CONCURRENCY else 1,
+            max_retries=int(settings.EMBEDDING_MAX_RETRIES) if hasattr(settings, 'EMBEDDING_MAX_RETRIES') else 3,
+            retry_delay=float(settings.EMBEDDING_RETRY_DELAY) if hasattr(settings, 'EMBEDDING_RETRY_DELAY') else 2.0,
+        )
+        logger.info(
+            f"Initialized Ollama embedding service: "
+            f"batch_size={settings.EMBEDDING_BATCH_SIZE}, "
+            f"concurrency={settings.EMBEDDING_CONCURRENCY}"
         )
     else:
         raise RuntimeError(f"Unsupported EMBEDDING_PROVIDER: {settings.EMBEDDING_PROVIDER}")
@@ -157,6 +159,8 @@ async def on_startup():
     else:
         # Create a None placeholder so dependency injection doesn't fail
         app.state.contextual_llm_service = None
+
+    await verify_ollama_services(app)
 
     # Vector store
     persist_dir = settings.CHROMA_PERSIST_DIR
@@ -194,6 +198,42 @@ async def on_startup():
     app.state.chat_repo = chat_repo
 
     logger.info("Startup complete: adapters instantiated")
+
+
+async def verify_ollama_services(app):
+    """Sanity test Ollama LLM and Embedding endpoints to fail fast if not reachable"""
+    logger.info("🔍 Running Ollama service connectivity checks...")
+
+    try:
+        # Test embedding API
+        embedding_service = app.state.embedding_service
+        test_text = "health check test"
+        emb = await embedding_service.generate_embedding(test_text)
+        if not emb or not emb.values:
+            raise RuntimeError("Embedding test failed: empty result.")
+        logger.info(f"✅ Embedding service OK ({embedding_service.model_name})")
+
+        # Test LLM API
+        llm_service = app.state.llm_service
+        test_prompt = "Hello, are you online?"
+        resp = await llm_service.generate_response(test_prompt)
+        if not resp:
+            raise RuntimeError("LLM test failed: no response.")
+        logger.info(f"✅ LLM service OK ({llm_service.model_name})")
+
+        # Test contextual LLM (if enabled)
+        contextual_llm_service = getattr(app.state, "contextual_llm_service", None)
+        if contextual_llm_service:
+            resp2 = await contextual_llm_service.generate_response("This is a contextual test")
+            if not resp2:
+                raise RuntimeError("Contextual LLM test failed: no response.")
+            logger.info(f"✅ Contextual LLM OK ({contextual_llm_service.model_name})")
+
+        logger.info("🚀 Ollama service checks complete. All good.")
+
+    except Exception as e:
+        logger.error(f"❌ Ollama service health check failed: {e}")
+        raise  # Stop startup if core services aren't healthy
 
 
 @app.on_event("shutdown")
