@@ -81,7 +81,6 @@ class OllamaEmbeddingService(EmbeddingService):
             return embeddings[0]
         else:
             embedding = response_json.get("embedding")
-            embedding = response_json.get("embedding")
             if not embedding:
                 raise EmbeddingGenerationError("No embedding in response")
             return embedding
