@@ -76,3 +76,8 @@ scripts/
 # Temporary files
 *.tmp
 *.temp
+
+.venv
+
+# Local data
+.data/
