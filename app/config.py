@@ -12,6 +12,14 @@ class CriticalConfigError(Exception):
 
 
 class AppSettings(BaseSettings):
+    # Pydantic model configuration
+    model_config = {
+        'extra': 'ignore',
+        'env_file': '.env',
+        'env_file_encoding': 'utf-8',
+        'validate_default': True,
+    }
+
     # spaCy
     SPACY_MODEL: str = Field("en_core_web_sm", env="SPACY_MODEL")
 
@@ -94,10 +102,6 @@ class AppSettings(BaseSettings):
     API_HOST: str = Field("0.0.0.0", env="API_HOST")
     API_PORT: int = Field(8000, env="API_PORT")
     DEBUG: bool = Field(False, env="DEBUG")
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 # Instantiate settings. This will load, validate, and expose the settings.
