@@ -138,6 +138,22 @@ Question:"""
         # Clean up the response to return just the question
         return response.strip().rstrip('?') + '?'
 
+    async def generate_multi_queries(self, query: str) -> list[str]:
+        """Generate multiple related search queries from the original one"""
+        prompt = f"""
+            I have a search query: "{query}".
+            Please generate 3 alternative queries that are on the same topic but use different wording or focus on different aspects.
+            Return the queries as a numbered list. For example:
+            1. First query
+            2. Second query
+            3. Third query
+        """
+        response = await self.generate_response(prompt)
+        print(f"MULTI QUERIES LLM RESPONSE: {response}")
+        queries = [line.strip().split(". ", 1)[1] for line in response.split("\n") if line.strip()]
+        queries.append(query)
+        return queries
+
     def _build_prompt(self, user_prompt: str, context: Optional[str] = None) -> str:
         """Build the full prompt with context for RAG"""
         if context:

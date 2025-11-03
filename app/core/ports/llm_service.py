@@ -60,6 +60,11 @@ class LLMService(ABC):
         pass
 
     @abstractmethod
+    async def generate_multi_queries(self, query: str) -> List[str]:
+        """Generate multiple related search queries from the original one"""
+        pass
+
+    @abstractmethod
     def get_model_info(self) -> Dict[str, Any]:
         """Return information about the LLM model"""
         pass

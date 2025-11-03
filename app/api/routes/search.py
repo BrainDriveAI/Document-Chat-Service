@@ -1,21 +1,34 @@
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from enum import Enum
 
 from ...api.deps import get_search_documents_use_case
 from ...core.use_cases.search_documents import SearchDocumentsUseCase
 from ...core.domain.entities.document_chunk import DocumentChunk
+from app.core.domain.entities.query_transformation import QueryTransformationMethod
 
 router = APIRouter()
 
 
 # Pydantic models for request/response
+class SearchRequestQueryTransformation(BaseModel):
+    enabled: Optional[bool] = True
+    methods: Optional[QueryTransformationMethod] = QueryTransformationMethod.CONTEXTUALIZE
+
+class SearchRequestConfig(BaseModel):
+    use_chat_history: Optional[bool] = True
+    max_history_turns: Optional[int] = 3
+    top_k: Optional[int] = Field(10, gt=0)
+    use_hybrid: Optional[bool] = True
+    query_transformation: Optional[SearchRequestQueryTransformation]
+    filters: Optional[Dict[str, Any]] = None
+
 class SearchRequest(BaseModel):
     query_text: str = Field(..., min_length=1)
     collection_id: Optional[str] = None
-    top_k: Optional[int] = Field(10, gt=0)
-    use_hybrid: Optional[bool] = True
-    filters: Optional[Dict[str, Any]] = None
+    chat_history: Optional[List[Dict]] = []
+    config: SearchRequestConfig
 
 
 class DocumentChunkResponse(BaseModel):
@@ -56,7 +69,8 @@ async def search_documents(
             collection_id=req.collection_id,
             top_k=req.top_k,
             filters=req.filters,
-            use_hybrid=req.use_hybrid
+            use_hybrid=req.use_hybrid,
+            use_query_transformation=req.use_query_transformation
         )
     except Exception as e:
         # If hybrid not implemented, fallback to vector-only?
