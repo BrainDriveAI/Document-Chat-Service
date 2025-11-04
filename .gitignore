@@ -17,3 +17,10 @@ data
 /chat_prompt.txt
 /upload_test.py
 /project_structure.py
+
+
+# AI
+CLAUDE.md
+.cursorrules
+TASKS.md
+.changeset/
