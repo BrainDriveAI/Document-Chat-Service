@@ -43,6 +43,7 @@ class EvaluationRun:
     run_date: datetime
     duration_seconds: Optional[float]
     config_snapshot: Dict[str, Any]
+    evaluated_count: int = 0  # Track how many questions have been evaluated
 
     @classmethod
     def create(
@@ -59,6 +60,7 @@ class EvaluationRun:
             total_questions=total_questions,
             correct_count=0,
             incorrect_count=0,
+            evaluated_count=0,
             run_date=datetime.now(UTC),
             duration_seconds=None,
             config_snapshot=config_snapshot or {}
@@ -85,6 +87,18 @@ class EvaluationRun:
         if self.total_questions == 0:
             return 0.0
         return (self.correct_count / self.total_questions) * 100
+
+    @property
+    def progress(self) -> float:
+        """Calculate evaluation progress (0.0 to 1.0)"""
+        if self.total_questions == 0:
+            return 0.0
+        return self.evaluated_count / self.total_questions
+
+    @property
+    def is_completed(self) -> bool:
+        """Check if all questions have been evaluated"""
+        return self.evaluated_count >= self.total_questions
 
 
 @dataclass

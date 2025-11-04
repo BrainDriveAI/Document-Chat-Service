@@ -21,6 +21,7 @@ class EvaluationRunModel(Base):
     total_questions = Column(Integer, nullable=False)
     correct_count = Column(Integer, nullable=False, default=0)
     incorrect_count = Column(Integer, nullable=False, default=0)
+    evaluated_count = Column(Integer, nullable=False, default=0)
     run_date = Column(DateTime, nullable=False)
     duration_seconds = Column(Float, nullable=True)
     config_snapshot = Column(JSON, nullable=False)
@@ -64,9 +65,29 @@ class SQLiteEvaluationRepository(EvaluationRepository):
         )
 
     async def init_models(self):
-        """Create tables if they don't exist"""
+        """Create tables if they don't exist and run migrations"""
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+            # Migration: Add evaluated_count column if it doesn't exist
+            await self._migrate_add_evaluated_count(conn)
+
+    async def _migrate_add_evaluated_count(self, conn):
+        """Migration: Add evaluated_count column to evaluation_runs table"""
+        from sqlalchemy import text
+
+        # Check if column exists
+        result = await conn.execute(
+            text("PRAGMA table_info(evaluation_runs)")
+        )
+        columns = [row[1] for row in result.fetchall()]
+
+        if 'evaluated_count' not in columns:
+            # Add the column with default value
+            await conn.execute(
+                text("ALTER TABLE evaluation_runs ADD COLUMN evaluated_count INTEGER NOT NULL DEFAULT 0")
+            )
+            print("Migration: Added evaluated_count column to evaluation_runs table")
 
     async def save_run(self, evaluation_run: EvaluationRun) -> EvaluationRun:
         """Save or update an evaluation run"""
@@ -79,6 +100,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     existing.total_questions = evaluation_run.total_questions
                     existing.correct_count = evaluation_run.correct_count
                     existing.incorrect_count = evaluation_run.incorrect_count
+                    existing.evaluated_count = evaluation_run.evaluated_count
                     existing.duration_seconds = evaluation_run.duration_seconds
                     existing.config_snapshot = evaluation_run.config_snapshot
                 else:
@@ -90,6 +112,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                         total_questions=evaluation_run.total_questions,
                         correct_count=evaluation_run.correct_count,
                         incorrect_count=evaluation_run.incorrect_count,
+                        evaluated_count=evaluation_run.evaluated_count,
                         run_date=evaluation_run.run_date,
                         duration_seconds=evaluation_run.duration_seconds,
                         config_snapshot=evaluation_run.config_snapshot
@@ -132,6 +155,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                 total_questions=result.total_questions,
                 correct_count=result.correct_count,
                 incorrect_count=result.incorrect_count,
+                evaluated_count=result.evaluated_count,
                 run_date=result.run_date,
                 duration_seconds=result.duration_seconds,
                 config_snapshot=result.config_snapshot
@@ -183,9 +207,20 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     total_questions=model.total_questions,
                     correct_count=model.correct_count,
                     incorrect_count=model.incorrect_count,
+                    evaluated_count=model.evaluated_count,
                     run_date=model.run_date,
                     duration_seconds=model.duration_seconds,
                     config_snapshot=model.config_snapshot
                 )
                 for model in models
             ]
+
+    async def get_evaluated_test_case_ids(self, run_id: str) -> List[str]:
+        """Get list of test_case_ids that have already been evaluated for a run"""
+        async with self._async_session() as db_session:
+            stmt = select(EvaluationResultModel.test_case_id).where(
+                EvaluationResultModel.evaluation_run_id == run_id
+            )
+
+            result = await db_session.execute(stmt)
+            return list(result.scalars().all())

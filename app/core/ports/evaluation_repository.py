@@ -31,3 +31,8 @@ class EvaluationRepository(ABC):
     async def list_runs(self, limit: int = 50) -> List[EvaluationRun]:
         """List recent evaluation runs"""
         pass
+
+    @abstractmethod
+    async def get_evaluated_test_case_ids(self, run_id: str) -> List[str]:
+        """Get list of test_case_ids that have already been evaluated for a run"""
+        pass

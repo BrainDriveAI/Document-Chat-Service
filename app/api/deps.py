@@ -39,6 +39,8 @@ from ..core.use_cases.context_retrieval import ContextRetrievalUseCase
 from ..core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
 from ..core.use_cases.evaluation.run_evaluation import RunEvaluationUseCase
 from ..core.use_cases.evaluation.get_results import GetEvaluationResultsUseCase
+from ..core.use_cases.evaluation.start_plugin_evaluation import StartPluginEvaluationUseCase
+from ..core.use_cases.evaluation.submit_plugin_evaluation import SubmitPluginEvaluationUseCase
 
 
 # Dependency provider functions
@@ -317,3 +319,30 @@ def get_get_evaluation_results_use_case(
 ) -> GetEvaluationResultsUseCase:
     """Get evaluation results use case"""
     return GetEvaluationResultsUseCase(evaluation_repo=evaluation_repo)
+
+
+def get_start_plugin_evaluation_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+    collection_repo: CollectionRepository = Depends(get_collection_repository),
+    context_retrieval_use_case: ContextRetrievalUseCase = Depends(get_context_retrieval_use_case),
+) -> StartPluginEvaluationUseCase:
+    """Get start plugin evaluation use case"""
+    return StartPluginEvaluationUseCase(
+        evaluation_repo=evaluation_repo,
+        collection_repo=collection_repo,
+        context_retrieval=context_retrieval_use_case,
+        test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
+        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
+    )
+
+
+def get_submit_plugin_evaluation_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+    judge_service: JudgeService = Depends(get_judge_service),
+) -> SubmitPluginEvaluationUseCase:
+    """Get submit plugin evaluation use case"""
+    return SubmitPluginEvaluationUseCase(
+        evaluation_repo=evaluation_repo,
+        judge_service=judge_service,
+        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
+    )
