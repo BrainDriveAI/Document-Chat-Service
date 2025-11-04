@@ -10,6 +10,7 @@ venv/
 Dockerfile.dev
 
 *.json
+!evaluation_test_docs/test_cases.json
 
 data
 
