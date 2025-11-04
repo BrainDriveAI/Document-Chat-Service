@@ -43,6 +43,45 @@ class AppSettings(BaseSettings):
         description="Which embedding provider to use: openai, pinecone, or ollama."
     )
 
+    # OpenAI (for Evaluation)
+    OPENAI_API_KEY: Optional[SecretStr] = Field(
+        default=None,
+        env="OPENAI_API_KEY",
+        description="OpenAI API key for evaluation judge service."
+    )
+    OPENAI_EVALUATION_MODEL: str = Field(
+        default="gpt-5-mini",
+        env="OPENAI_EVALUATION_MODEL",
+        description="OpenAI model to use as judge for evaluation."
+    )
+    OPENAI_EVALUATION_TIMEOUT: int = Field(
+        default=60,
+        env="OPENAI_EVALUATION_TIMEOUT",
+        description="Timeout for evaluation judge API calls in seconds."
+    )
+
+    # Evaluation Settings
+    INITIALIZE_EVALUATION: bool = Field(
+        default=True,
+        env="INITIALIZE_EVALUATION",
+        description="Whether to initialize evaluation system on startup."
+    )
+    EVALUATION_TEST_COLLECTION_ID: str = Field(
+        default="eval-test-collection-00000000-0000-0000-0000-000000000001",
+        env="EVALUATION_TEST_COLLECTION_ID",
+        description="Fixed ID for the evaluation test collection."
+    )
+    EVALUATION_TEST_COLLECTION_NAME: str = Field(
+        default="evaluation_test_collection",
+        env="EVALUATION_TEST_COLLECTION_NAME",
+        description="Name of the evaluation test collection."
+    )
+    EVALUATION_TEST_DOCS_DIR: str = Field(
+        default="evaluation_test_docs",
+        env="EVALUATION_TEST_DOCS_DIR",
+        description="Directory containing evaluation test documents."
+    )
+
     # EMBEDDING OPTIMIZATIONS
     EMBEDDING_BATCH_SIZE: Optional[int] = Field(
         default=4,  # Start even smaller - 4 instead of 8

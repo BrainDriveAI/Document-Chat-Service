@@ -86,3 +86,23 @@ class IntentClassificationError(DomainException):
     """Error during intent classification"""
     pass
 
+
+class EvaluationNotFoundError(DomainException):
+    """Raised when an evaluation run is not found"""
+    pass
+
+
+class EvaluationInitializationError(DomainException):
+    """Raised when evaluation test collection initialization fails"""
+    pass
+
+
+class JudgeServiceError(DomainException):
+    """Raised when judge service evaluation fails"""
+    pass
+
+
+class TestCaseLoadError(DomainException):
+    """Raised when loading test cases from file fails"""
+    pass
+

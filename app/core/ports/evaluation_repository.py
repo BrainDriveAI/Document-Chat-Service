@@ -1,0 +1,33 @@
+from abc import ABC, abstractmethod
+from typing import Optional, List
+
+from ..domain.entities.evaluation import EvaluationRun, EvaluationResult
+
+
+class EvaluationRepository(ABC):
+    """Port interface for evaluation persistence"""
+
+    @abstractmethod
+    async def save_run(self, evaluation_run: EvaluationRun) -> EvaluationRun:
+        """Save or update an evaluation run"""
+        pass
+
+    @abstractmethod
+    async def save_result(self, evaluation_result: EvaluationResult) -> EvaluationResult:
+        """Save an evaluation result"""
+        pass
+
+    @abstractmethod
+    async def find_run_by_id(self, run_id: str) -> Optional[EvaluationRun]:
+        """Find evaluation run by ID"""
+        pass
+
+    @abstractmethod
+    async def find_results_by_run_id(self, run_id: str) -> List[EvaluationResult]:
+        """Find all results for an evaluation run"""
+        pass
+
+    @abstractmethod
+    async def list_runs(self, limit: int = 50) -> List[EvaluationRun]:
+        """List recent evaluation runs"""
+        pass
