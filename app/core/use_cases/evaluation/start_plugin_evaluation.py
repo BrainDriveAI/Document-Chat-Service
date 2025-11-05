@@ -75,17 +75,22 @@ class StartPluginEvaluationUseCase:
             logger.debug(f"Retrieving context for test case: {test_case.id}")
 
             context = await self._context_retrieval.retrieve_context(
-                query=test_case.question,
+                query_text=test_case.question,
                 collection_id=self._test_collection_id,
                 top_k=5,
                 use_hybrid=True
             )
 
+            retrieved_context = "\n\n".join([
+                f"[Chunk {i+1}]\n{chunk.content}"
+                for i, chunk in enumerate(context.chunks)
+            ])
+
             test_data.append({
                 "test_case_id": test_case.id,
                 "question": test_case.question,
                 "category": test_case.category,
-                "retrieved_context": context,
+                "retrieved_context": retrieved_context,
                 "ground_truth": test_case.ground_truth
             })
 
