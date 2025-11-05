@@ -38,7 +38,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     httpx==0.28.1 \
     tiktoken==0.9.0 \
     aiohttp==3.12.13 \
-    psycopg2-binary==2.9.10
+    psycopg2-binary==2.9.10 \
+    scikit-learn==1.7.2
 
 # Install spacy and related packages
 # RUN pip install --no-cache-dir \
