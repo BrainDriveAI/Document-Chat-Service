@@ -51,7 +51,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir \
     chromadb==1.0.13 \
     rank-bm25==0.2.2 \
-    langchain-text-splitters==0.3.8
+    langchain==1.0.3 \
+    langchain-text-splitters==0.3.11 \
+    langchain-openai==1.0.2
 
 # Copy project files
 COPY . .
