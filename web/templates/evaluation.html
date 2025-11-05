@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluation - Chat with Your Documents{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">RAG System Evaluation</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Test and measure the accuracy of your RAG system
+                </p>
+            </div>
+            <button
+                id="run-evaluation-btn"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                <i data-lucide="play-circle" class="h-4 w-4 mr-2"></i>
+                Run New Evaluation
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button id="tab-runs" class="tab-btn border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                <i data-lucide="list" class="h-4 w-4 inline mr-2"></i>
+                Evaluation Runs
+            </button>
+            <button id="tab-results" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" disabled>
+                <i data-lucide="bar-chart-3" class="h-4 w-4 inline mr-2"></i>
+                Results Details
+            </button>
+        </nav>
+    </div>
+
+    <!-- Evaluation Runs Tab -->
+    <div id="tab-runs-content" class="tab-content">
+        <!-- Stats Cards -->
+        <div id="stats-cards" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            <!-- Will be populated dynamically -->
+        </div>
+
+        <!-- Runs Table -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    Recent Evaluation Runs
+                </h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Date
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Accuracy
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Correct / Total
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Duration
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="runs-table-body" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="runs-empty" class="hidden px-6 py-12 text-center">
+                <i data-lucide="inbox" class="mx-auto h-12 w-12 text-gray-400"></i>
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No evaluation runs</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by running your first evaluation.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Details Tab -->
+    <div id="tab-results-content" class="tab-content hidden">
+        <!-- Summary Card -->
+        <div id="results-summary" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden mb-6">
+            <!-- Will be populated dynamically -->
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        id="search-results"
+                        placeholder="Search questions..."
+                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <select
+                        id="filter-correctness"
+                        class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="all">All Results</option>
+                        <option value="correct">Correct Only</option>
+                        <option value="incorrect">Incorrect Only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    Test Results
+                </h3>
+            </div>
+            <div class="divide-y divide-gray-200 dark:divide-gray-700" id="results-list">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // State
+    let currentEvaluationId = null;
+    let allResults = [];
+
+    // Initialize
+    async function init() {
+        await loadRuns();
+        setupEventListeners();
+        lucide.createIcons();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        document.getElementById('run-evaluation-btn').addEventListener('click', runEvaluation);
+        document.getElementById('tab-runs').addEventListener('click', () => switchTab('runs'));
+        document.getElementById('tab-results').addEventListener('click', () => switchTab('results'));
+        document.getElementById('search-results').addEventListener('input', filterResults);
+        document.getElementById('filter-correctness').addEventListener('change', filterResults);
+    }
+
+    // Switch tabs
+    function switchTab(tab) {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabBtns.forEach(btn => {
+            btn.classList.remove('border-blue-500', 'text-blue-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        tabContents.forEach(content => content.classList.add('hidden'));
+
+        if (tab === 'runs') {
+            document.getElementById('tab-runs').classList.remove('border-transparent', 'text-gray-500');
+            document.getElementById('tab-runs').classList.add('border-blue-500', 'text-blue-600');
+            document.getElementById('tab-runs-content').classList.remove('hidden');
+        } else if (tab === 'results') {
+            document.getElementById('tab-results').classList.remove('border-transparent', 'text-gray-500');
+            document.getElementById('tab-results').classList.add('border-blue-500', 'text-blue-600');
+            document.getElementById('tab-results-content').classList.remove('hidden');
+        }
+    }
+
+    // Run evaluation
+    async function runEvaluation() {
+        const btn = document.getElementById('run-evaluation-btn');
+        const originalText = btn.innerHTML;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>Running...';
+
+            utils.showToast('Starting evaluation...', 'info');
+
+            const data = await utils.apiRequest('/api/evaluation/run', { method: 'POST' });
+
+            utils.showToast('Evaluation completed successfully!', 'success');
+
+            // Reload runs and show results
+            await loadRuns();
+            currentEvaluationId = data.evaluation_id;
+            await loadResults(data.evaluation_id);
+            switchTab('results');
+
+        } catch (error) {
+            utils.showToast('Evaluation failed: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            lucide.createIcons();
+        }
+    }
+
+    // Load runs
+    async function loadRuns() {
+        try {
+            const data = await utils.apiRequest('/api/evaluation/runs?limit=50');
+
+            if (!data.runs || data.runs.length === 0) {
+                document.getElementById('runs-table-body').innerHTML = '';
+                document.getElementById('runs-empty').classList.remove('hidden');
+                updateStats(null);
+                return;
+            }
+
+            document.getElementById('runs-empty').classList.add('hidden');
+
+            const tbody = document.getElementById('runs-table-body');
+            tbody.innerHTML = data.runs.map(run => `
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onclick="loadResults('${run.id}')">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        ${utils.formatDate(run.run_date)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${getStatusBadge(run.status)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
+                                <div class="bg-${run.accuracy >= 80 ? 'green' : run.accuracy >= 60 ? 'yellow' : 'red'}-500 h-2 rounded-full" style="width: ${run.accuracy}%"></div>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">${run.accuracy.toFixed(1)}%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        <span class="text-green-600 dark:text-green-400 font-medium">${run.correct_count}</span> / ${run.total_questions}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        ${run.duration_seconds ? run.duration_seconds.toFixed(1) + 's' : 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" onclick="event.stopPropagation(); loadResults('${run.id}')">
+                            View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            updateStats(data.runs[0]);
+            lucide.createIcons();
+        } catch (error) {
+            utils.showToast('Failed to load runs: ' + error.message, 'error');
+        }
+    }
+
+    // Update stats cards
+    function updateStats(latestRun) {
+        const statsContainer = document.getElementById('stats-cards');
+
+        if (!latestRun) {
+            statsContainer.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="activity" class="h-6 w-6 text-gray-400"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                        No data available
+                                    </dt>
+                                    <dd class="text-lg font-medium text-gray-900 dark:text-white">
+                                        Run your first evaluation
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        statsContainer.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="percent" class="h-6 w-6 text-blue-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                    Latest Accuracy
+                                </dt>
+                                <dd class="text-lg font-medium text-gray-900 dark:text-white">
+                                    ${latestRun.accuracy.toFixed(1)}%
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="check-circle" class="h-6 w-6 text-green-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                    Correct Answers
+                                </dt>
+                                <dd class="text-lg font-medium text-gray-900 dark:text-white">
+                                    ${latestRun.correct_count} / ${latestRun.total_questions}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="x-circle" class="h-6 w-6 text-red-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                    Incorrect Answers
+                                </dt>
+                                <dd class="text-lg font-medium text-gray-900 dark:text-white">
+                                    ${latestRun.incorrect_count}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="clock" class="h-6 w-6 text-purple-600"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                                    Duration
+                                </dt>
+                                <dd class="text-lg font-medium text-gray-900 dark:text-white">
+                                    ${latestRun.duration_seconds ? latestRun.duration_seconds.toFixed(1) + 's' : 'N/A'}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+
+    // Load results
+    async function loadResults(evaluationId) {
+        try {
+            utils.showLoading();
+            currentEvaluationId = evaluationId;
+
+            const data = await utils.apiRequest(`/api/evaluation/results/${evaluationId}`);
+            allResults = data.results;
+
+            // Render summary
+            renderSummary(data.evaluation_run);
+
+            // Render results
+            renderResults(allResults);
+
+            // Enable results tab and switch to it
+            document.getElementById('tab-results').disabled = false;
+            switchTab('results');
+
+            lucide.createIcons();
+        } catch (error) {
+            utils.showToast('Failed to load results: ' + error.message, 'error');
+        } finally {
+            utils.hideLoading();
+        }
+    }
+
+    // Render summary
+    function renderSummary(run) {
+        const summary = document.getElementById('results-summary');
+        summary.innerHTML = `
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    Evaluation Summary
+                </h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    ${utils.formatDate(run.run_date)}
+                </p>
+            </div>
+            <div class="px-4 py-5 sm:p-6">
+                <dl class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Accuracy
+                        </dt>
+                        <dd class="mt-1 text-3xl font-semibold ${run.accuracy >= 80 ? 'text-green-600' : run.accuracy >= 60 ? 'text-yellow-600' : 'text-red-600'}">
+                            ${run.accuracy.toFixed(1)}%
+                        </dd>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Total Questions
+                        </dt>
+                        <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                            ${run.total_questions}
+                        </dd>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Correct / Incorrect
+                        </dt>
+                        <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                            <span class="text-green-600 dark:text-green-400">${run.correct_count}</span> /
+                            <span class="text-red-600 dark:text-red-400">${run.incorrect_count}</span>
+                        </dd>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Duration
+                        </dt>
+                        <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                            ${run.duration_seconds ? run.duration_seconds.toFixed(1) + 's' : 'N/A'}
+                        </dd>
+                    </div>
+                </dl>
+                ${run.config_snapshot ? `
+                    <div class="mt-5 pt-5 border-t border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Configuration</h4>
+                        <div class="flex flex-wrap gap-2">
+                            ${Object.entries(run.config_snapshot).map(([key, value]) => `
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                    ${key}: ${value}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    // Render results
+    function renderResults(results) {
+        const container = document.getElementById('results-list');
+
+        if (!results || results.length === 0) {
+            container.innerHTML = `
+                <div class="px-6 py-12 text-center">
+                    <i data-lucide="inbox" class="mx-auto h-12 w-12 text-gray-400"></i>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No results</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">No evaluation results to display.</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        container.innerHTML = results.map((result, index) => `
+            <div class="border-l-4 ${result.judge_correct ? 'border-green-500' : 'border-red-500'}">
+                <div class="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onclick="toggleResult('result-${index}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center">
+                                <i data-lucide="${result.judge_correct ? 'check-circle' : 'x-circle'}" class="h-5 w-5 ${result.judge_correct ? 'text-green-500' : 'text-red-500'} mr-2"></i>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    ${result.question}
+                                </p>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Test Case: ${result.test_case_id}
+                            </p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <i data-lucide="chevron-down" class="h-5 w-5 text-gray-400 result-chevron" id="chevron-result-${index}"></i>
+                        </div>
+                    </div>
+                </div>
+                <div id="result-${index}" class="hidden px-4 py-4 sm:px-6 bg-gray-50 dark:bg-gray-900">
+                    <div class="space-y-4">
+                        <!-- Question -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Question</h4>
+                            <p class="text-sm text-gray-700 dark:text-gray-300">${result.question}</p>
+                        </div>
+
+                        <!-- LLM Answer -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">LLM Answer</h4>
+                            <div class="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
+                                ${result.llm_answer}
+                            </div>
+                        </div>
+
+                        <!-- Judge Verdict -->
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Judge Verdict</h4>
+                            <div class="flex items-start">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${result.judge_correct ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'}">
+                                    ${result.judge_correct ? 'Correct' : 'Incorrect'}
+                                </span>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">${result.judge_reasoning}</p>
+                        </div>
+
+                        ${result.judge_factual_errors && result.judge_factual_errors.length > 0 ? `
+                            <div>
+                                <h4 class="text-sm font-medium text-red-600 dark:text-red-400 mb-2">Factual Errors</h4>
+                                <ul class="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                                    ${result.judge_factual_errors.map(error => `<li>${error}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${result.judge_missing_info && result.judge_missing_info.length > 0 ? `
+                            <div>
+                                <h4 class="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">Missing Information</h4>
+                                <ul class="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                                    ${result.judge_missing_info.map(info => `<li>${info}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <!-- Retrieved Context (Collapsible) -->
+                        <div>
+                            <button onclick="event.stopPropagation(); toggleContext('context-${index}')" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                <i data-lucide="file-text" class="h-4 w-4 inline mr-1"></i>
+                                View Retrieved Context
+                            </button>
+                            <div id="context-${index}" class="hidden mt-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
+                                <pre class="whitespace-pre-wrap">${result.retrieved_context}</pre>
+                            </div>
+                        </div>
+
+                        ${result.ground_truth ? `
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Expected Answer (Ground Truth)</h4>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">${result.ground_truth}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        lucide.createIcons();
+    }
+
+    // Toggle result details
+    function toggleResult(id) {
+        const element = document.getElementById(id);
+        const chevron = document.getElementById('chevron-' + id);
+
+        if (element.classList.contains('hidden')) {
+            element.classList.remove('hidden');
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            element.classList.add('hidden');
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    // Toggle context
+    function toggleContext(id) {
+        const element = document.getElementById(id);
+        element.classList.toggle('hidden');
+    }
+
+    // Filter results
+    function filterResults() {
+        const searchTerm = document.getElementById('search-results').value.toLowerCase();
+        const correctnessFilter = document.getElementById('filter-correctness').value;
+
+        const filtered = allResults.filter(result => {
+            const matchesSearch = result.question.toLowerCase().includes(searchTerm) ||
+                                 result.llm_answer.toLowerCase().includes(searchTerm);
+
+            const matchesCorrectness = correctnessFilter === 'all' ||
+                                      (correctnessFilter === 'correct' && result.judge_correct) ||
+                                      (correctnessFilter === 'incorrect' && !result.judge_correct);
+
+            return matchesSearch && matchesCorrectness;
+        });
+
+        renderResults(filtered);
+    }
+
+    // Get status badge
+    function getStatusBadge(status) {
+        const badges = {
+            completed: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Completed</span>',
+            running: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">Running</span>',
+            failed: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">Failed</span>',
+            pending: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">Pending</span>'
+        };
+        return badges[status] || badges.pending;
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+{% endblock %}

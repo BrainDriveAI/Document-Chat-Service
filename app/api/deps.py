@@ -20,6 +20,8 @@ from ..core.ports.bm25_service import BM25Service
 from ..core.ports.rank_fusion_service import RankFusionService
 from ..core.ports.orchestrator import ChatOrchestrator
 from ..core.ports.clustering_service import ClusteringService
+from ..core.ports.judge_service import JudgeService
+from ..core.ports.evaluation_repository import EvaluationRepository
 from ..core.ports.repositories import (
     DocumentRepository, CollectionRepository, ChatRepository
 )
@@ -34,6 +36,11 @@ from ..core.use_cases.query_transformation import QueryTransformationUseCase
 from ..core.use_cases.intent_classification import IntentClassificationUseCase
 from ..core.use_cases.collection_summary import CollectionSummaryUseCase
 from ..core.use_cases.context_retrieval import ContextRetrievalUseCase
+from ..core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
+from ..core.use_cases.evaluation.run_evaluation import RunEvaluationUseCase
+from ..core.use_cases.evaluation.get_results import GetEvaluationResultsUseCase
+from ..core.use_cases.evaluation.start_plugin_evaluation import StartPluginEvaluationUseCase
+from ..core.use_cases.evaluation.submit_plugin_evaluation import SubmitPluginEvaluationUseCase
 
 
 # Dependency provider functions
@@ -254,3 +261,88 @@ def get_chat_interaction_use_case(
         orchestrator: ChatOrchestrator = Depends(get_chat_orchestrator),
 ) -> ChatInteractionUseCase:
     return ChatInteractionUseCase(chat_repo=chat_repo, orchestrator=orchestrator)
+
+
+# Evaluation dependency providers
+def get_evaluation_repository(request: Request) -> EvaluationRepository:
+    """Get evaluation repository instance from app state"""
+    repo = getattr(request.app.state, "evaluation_repo", None)
+    if repo is None:
+        raise HTTPException(status_code=500, detail="EvaluationRepository not initialized")
+    return repo
+
+
+def get_judge_service(request: Request) -> JudgeService:
+    """Get judge service instance from app state"""
+    judge = getattr(request.app.state, "judge_service", None)
+    if judge is None:
+        raise HTTPException(status_code=500, detail="JudgeService not initialized")
+    return judge
+
+
+def get_initialize_test_collection_use_case(
+    collection_repo: CollectionRepository = Depends(get_collection_repository),
+    document_repo: DocumentRepository = Depends(get_document_repository),
+    document_processing_use_case: SimplifiedDocumentProcessingUseCase = Depends(get_document_processing_use_case),
+) -> InitializeTestCollectionUseCase:
+    """Get initialize test collection use case"""
+    return InitializeTestCollectionUseCase(
+        collection_repo=collection_repo,
+        document_repo=document_repo,
+        document_processing_use_case=document_processing_use_case,
+        test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
+        test_collection_name=settings.EVALUATION_TEST_COLLECTION_NAME,
+        test_docs_dir=settings.EVALUATION_TEST_DOCS_DIR
+    )
+
+
+def get_run_evaluation_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+    judge_service: JudgeService = Depends(get_judge_service),
+    llm_service: LLMService = Depends(get_llm_service),
+    context_retrieval_use_case: ContextRetrievalUseCase = Depends(get_context_retrieval_use_case),
+    initialize_test_collection_use_case: InitializeTestCollectionUseCase = Depends(get_initialize_test_collection_use_case),
+) -> RunEvaluationUseCase:
+    """Get run evaluation use case"""
+    return RunEvaluationUseCase(
+        evaluation_repo=evaluation_repo,
+        judge_service=judge_service,
+        llm_service=llm_service,
+        context_retrieval_use_case=context_retrieval_use_case,
+        initialize_test_collection_use_case=initialize_test_collection_use_case,
+        test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID
+    )
+
+
+def get_get_evaluation_results_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+) -> GetEvaluationResultsUseCase:
+    """Get evaluation results use case"""
+    return GetEvaluationResultsUseCase(evaluation_repo=evaluation_repo)
+
+
+def get_start_plugin_evaluation_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+    collection_repo: CollectionRepository = Depends(get_collection_repository),
+    context_retrieval_use_case: ContextRetrievalUseCase = Depends(get_context_retrieval_use_case),
+) -> StartPluginEvaluationUseCase:
+    """Get start plugin evaluation use case"""
+    return StartPluginEvaluationUseCase(
+        evaluation_repo=evaluation_repo,
+        collection_repo=collection_repo,
+        context_retrieval=context_retrieval_use_case,
+        test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
+        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
+    )
+
+
+def get_submit_plugin_evaluation_use_case(
+    evaluation_repo: EvaluationRepository = Depends(get_evaluation_repository),
+    judge_service: JudgeService = Depends(get_judge_service),
+) -> SubmitPluginEvaluationUseCase:
+    """Get submit plugin evaluation use case"""
+    return SubmitPluginEvaluationUseCase(
+        evaluation_repo=evaluation_repo,
+        judge_service=judge_service,
+        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
+    )

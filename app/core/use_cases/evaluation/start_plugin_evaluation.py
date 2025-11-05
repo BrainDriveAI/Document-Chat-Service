@@ -1,0 +1,218 @@
+import json
+import logging
+import uuid
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+
+from ...domain.entities.evaluation import EvaluationRun, TestCase
+from ...domain.entities.evaluation_config import EvaluationConfig
+from ...ports.evaluation_repository import EvaluationRepository
+from ...ports.repositories import CollectionRepository
+from ..context_retrieval import ContextRetrievalUseCase
+
+logger = logging.getLogger(__name__)
+
+
+class StartPluginEvaluationUseCase:
+    """
+    Start a plugin-based evaluation.
+
+    Creates an evaluation run and retrieves context for all test questions.
+    Returns evaluation_run_id and test data (questions + context) for plugin to generate answers.
+    """
+
+    def __init__(
+        self,
+        evaluation_repo: EvaluationRepository,
+        collection_repo: CollectionRepository,
+        context_retrieval: ContextRetrievalUseCase,
+        test_collection_id: str,
+        test_cases_path: str
+    ):
+        self._evaluation_repo = evaluation_repo
+        self._collection_repo = collection_repo
+        self._context_retrieval = context_retrieval
+        self._test_collection_id = test_collection_id
+        self._test_cases_path = test_cases_path
+
+    async def execute(self) -> Dict[str, Any]:
+        """
+        Start plugin evaluation.
+
+        Returns:
+            Dict with:
+                - evaluation_run_id: str
+                - test_data: List[Dict] with test_case_id, question, retrieved_context
+        """
+        logger.info("Starting plugin evaluation")
+
+        # Verify test collection exists
+        collection = await self._collection_repo.find_by_id(self._test_collection_id)
+        if not collection:
+            raise ValueError(f"Evaluation test collection not found: {self._test_collection_id}")
+
+        # Load test cases
+        test_cases = self._load_test_cases()
+        logger.info(f"Loaded {len(test_cases)} test cases")
+
+        # Create evaluation run
+        config_snapshot = {
+            "collection_id": self._test_collection_id,
+            "test_cases_path": self._test_cases_path,
+            "evaluation_type": "plugin"
+        }
+
+        evaluation_run = EvaluationRun.create(
+            collection_id=self._test_collection_id,
+            total_questions=len(test_cases),
+            config_snapshot=config_snapshot
+        )
+
+        await self._evaluation_repo.save_run(evaluation_run)
+        logger.info(f"Created evaluation run: {evaluation_run.id}")
+
+        # Retrieve context for each test case
+        test_data = []
+        for test_case in test_cases:
+            logger.debug(f"Retrieving context for test case: {test_case.id}")
+
+            context = await self._context_retrieval.retrieve_context(
+                query_text=test_case.question,
+                collection_id=self._test_collection_id,
+                top_k=5,
+                use_hybrid=True
+            )
+
+            retrieved_context = "\n\n".join([
+                f"[Chunk {i+1}]\n{chunk.content}"
+                for i, chunk in enumerate(context.chunks)
+            ])
+
+            test_data.append({
+                "test_case_id": test_case.id,
+                "question": test_case.question,
+                "category": test_case.category,
+                "retrieved_context": retrieved_context,
+                "ground_truth": test_case.ground_truth
+            })
+
+        logger.info(f"Retrieved context for {len(test_data)} test cases")
+
+        return {
+            "evaluation_run_id": evaluation_run.id,
+            "test_data": test_data
+        }
+
+    async def execute_with_questions(
+        self,
+        collection_id: str,
+        questions: List[str],
+        evaluation_config: Optional[EvaluationConfig] = None
+    ) -> Dict[str, Any]:
+        """
+        Start plugin evaluation with custom questions.
+
+        Args:
+            collection_id: ID of collection to evaluate against
+            questions: List of question strings
+            evaluation_config: Optional EvaluationConfig domain entity
+
+        Returns:
+            Dict with:
+                - evaluation_run_id: str
+                - test_data: List[Dict] with test_case_id, question, retrieved_context
+
+        Raises:
+            ValueError: If collection not found or questions list is empty
+        """
+        logger.info(f"Starting plugin evaluation with {len(questions)} custom questions")
+
+        # Validate input
+        if not questions or len(questions) == 0:
+            raise ValueError("Questions list cannot be empty")
+
+        # Verify collection exists
+        collection = await self._collection_repo.find_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+
+        # Create test cases from questions (generate IDs and set category)
+        test_cases = [
+            TestCase(
+                id=str(uuid.uuid4()),
+                question=question,
+                category="custom",
+                ground_truth=None
+            )
+            for question in questions
+        ]
+
+        logger.info(f"Created {len(test_cases)} test cases from custom questions")
+
+        # Create config snapshot with evaluation config
+        config_snapshot = {
+            "collection_id": collection_id,
+            "evaluation_type": "plugin_custom",
+            "questions_count": len(questions)
+        }
+
+        # Add evaluation config if provided
+        if evaluation_config:
+            config_snapshot.update(evaluation_config.to_dict())
+
+        evaluation_run = EvaluationRun.create(
+            collection_id=collection_id,
+            total_questions=len(test_cases),
+            config_snapshot=config_snapshot
+        )
+
+        await self._evaluation_repo.save_run(evaluation_run)
+        logger.info(f"Created evaluation run: {evaluation_run.id}")
+
+        # Save test cases for this evaluation run
+        await self._evaluation_repo.save_test_cases(evaluation_run.id, test_cases)
+        logger.info(f"Saved {len(test_cases)} test cases for evaluation run")
+
+        # Retrieve context for each question
+        test_data = []
+        for test_case in test_cases:
+            logger.debug(f"Retrieving context for question: {test_case.question[:50]}...")
+
+            context = await self._context_retrieval.retrieve_context(
+                query_text=test_case.question,
+                collection_id=collection_id,
+                top_k=5,
+                use_hybrid=True
+            )
+
+            retrieved_context = "\n\n".join([
+                f"[Chunk {i+1}]\n{chunk.content}"
+                for i, chunk in enumerate(context.chunks)
+            ])
+
+            test_data.append({
+                "test_case_id": test_case.id,
+                "question": test_case.question,
+                "category": test_case.category,
+                "retrieved_context": retrieved_context,
+                "ground_truth": test_case.ground_truth
+            })
+
+        logger.info(f"Retrieved context for {len(test_data)} custom questions")
+
+        return {
+            "evaluation_run_id": evaluation_run.id,
+            "test_data": test_data
+        }
+
+    def _load_test_cases(self) -> List[TestCase]:
+        """Load test cases from JSON file"""
+        test_cases_file = Path(self._test_cases_path)
+
+        if not test_cases_file.exists():
+            raise FileNotFoundError(f"Test cases file not found: {self._test_cases_path}")
+
+        with open(test_cases_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        return [TestCase.from_dict(tc) for tc in data.get("test_cases", [])]

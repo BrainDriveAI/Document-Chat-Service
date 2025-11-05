@@ -1,0 +1,213 @@
+{
+    "test_cases": [
+      {
+        "id": "test_001",
+        "question": "What is BrainDrive?",
+        "ground_truth": "BrainDrive is an open-source, self-hosted AI platform that serves as an alternative to ChatGPT. It is MIT-licensed and designed to give users complete ownership and control over their AI system.",
+        "category": "general_overview"
+      },
+      {
+        "id": "test_002",
+        "question": "What license is BrainDrive released under?",
+        "ground_truth": "BrainDrive is released under the MIT License, which is a permissive open-source license that allows users to freely use, modify, and distribute the software.",
+        "category": "licensing"
+      },
+      {
+        "id": "test_003",
+        "question": "What are the main technologies used in BrainDrive's backend?",
+        "ground_truth": "BrainDrive's backend is built with FastAPI (Python web framework), SQLModel for database ORM, Uvicorn as the ASGI server, SQLite as the default database, and includes Pydantic for data validation, Alembic for migrations, and Structlog for logging.",
+        "category": "backend_tech"
+      },
+      {
+        "id": "test_004",
+        "question": "What frontend technologies does BrainDrive use?",
+        "ground_truth": "BrainDrive's frontend uses React 18, TypeScript, Vite for build tooling, Material-UI (MUI) for UI components, React Router for navigation, React Grid Layout for the page builder, Axios for HTTP requests, and Zod for schema validation.",
+        "category": "frontend_tech"
+      },
+      {
+        "id": "test_005",
+        "question": "What port does the BrainDrive backend run on by default?",
+        "ground_truth": "The BrainDrive backend runs on port 8005 by default.",
+        "category": "installation"
+      },
+      {
+        "id": "test_006",
+        "question": "What port does the BrainDrive frontend development server use?",
+        "ground_truth": "The BrainDrive frontend development server uses port 5173 by default (Vite's default port).",
+        "category": "installation"
+      },
+      {
+        "id": "test_007",
+        "question": "What are the five core components of BrainDrive?",
+        "ground_truth": "The five core components are: 1) BrainDrive Core (the open-source AI system), 2) BrainDrive Studio (customizable development platform), 3) BrainDrive Community (collaborative space), 4) BrainDrive Marketplace (ecosystem for exchange and monetization), and 5) BrainDrive LLC (initial node in the decentralized network).",
+        "category": "architecture"
+      },
+      {
+        "id": "test_008",
+        "question": "What is BrainDrive Studio used for?",
+        "ground_truth": "BrainDrive Studio is a customizable development platform that includes a visual Page Builder for creating custom user interfaces. It allows users to drag and drop plugin components onto a canvas to create custom pages and dashboards without coding.",
+        "category": "features"
+      },
+      {
+        "id": "test_009",
+        "question": "How do you install a plugin in BrainDrive?",
+        "ground_truth": "To install a plugin, go to the Plugin Manager in the UI, navigate to Install Plugins, enter the GitHub repository URL of the BrainDrive plugin, and click Install. The system will download and add the plugin automatically.",
+        "category": "plugin_management"
+      },
+      {
+        "id": "test_010",
+        "question": "What is the purpose of the lifecycle_manager.py file in a plugin?",
+        "ground_truth": "The lifecycle_manager.py file defines a class that implements standard methods for plugin installation, removal, and status management. It tells the BrainDrive backend how to install, uninstall, and manage the plugin throughout its lifecycle.",
+        "category": "plugin_development"
+      },
+      {
+        "id": "test_011",
+        "question": "What are the six core Service Bridges available to plugin developers?",
+        "ground_truth": "The six core Service Bridges are: 1) API Bridge (for backend API calls), 2) Event Bridge (for cross-plugin communication), 3) Theme Bridge (for theme information), 4) Settings Bridge (for user preferences), 5) Page Context Bridge (for current page info), and 6) Plugin State Bridge (for persistent plugin storage).",
+        "category": "plugin_development"
+      },
+      {
+        "id": "test_012",
+        "question": "What command is used to start the BrainDrive backend in development mode?",
+        "ground_truth": "The command to start the backend is: uvicorn main:app --host localhost --port 8005",
+        "category": "installation"
+      },
+      {
+        "id": "test_013",
+        "question": "What command is used to start the BrainDrive frontend development server?",
+        "ground_truth": "The command to start the frontend development server is: npm run dev",
+        "category": "installation"
+      },
+      {
+        "id": "test_014",
+        "question": "What is BrainDrive's mission statement?",
+        "ground_truth": "BrainDrive's mission is to make it easy to build, control, and benefit from your own AI system.",
+        "category": "vision_mission"
+      },
+      {
+        "id": "test_015",
+        "question": "What are the four guiding principles of BrainDrive?",
+        "ground_truth": "The four guiding principles are: 1) Ownership (users should own their data and setup), 2) Freedom (avoid lock-in or restrictive designs), 3) Empowerment (documentation and design should empower users), and 4) Sustainability (focus on contributions that help the ecosystem thrive).",
+        "category": "vision_mission"
+      },
+      {
+        "id": "test_016",
+        "question": "What Python version is recommended for BrainDrive?",
+        "ground_truth": "Python 3.11 is recommended for BrainDrive, as shown in the installation guide that creates a Conda environment with Python 3.11.",
+        "category": "installation"
+      },
+      {
+        "id": "test_017",
+        "question": "What is Webpack Module Federation used for in BrainDrive?",
+        "ground_truth": "Webpack Module Federation is used to load frontend plugins at runtime, allowing plugins to be dynamically integrated into the system without requiring a full rebuild or reload of the application.",
+        "category": "architecture"
+      },
+      {
+        "id": "test_018",
+        "question": "What database does BrainDrive use by default?",
+        "ground_truth": "BrainDrive uses SQLite as the default database, which is lightweight and easy to start with, though users can upgrade to a different database if needed.",
+        "category": "backend_tech"
+      },
+      {
+        "id": "test_019",
+        "question": "How does BrainDrive handle authentication?",
+        "ground_truth": "BrainDrive uses JWT-based authentication with access and refresh tokens, includes role-based access control, and has CORS support. It uses Passlib for secure password hashing and Python-Jose for JWT creation and verification.",
+        "category": "backend_features"
+      },
+      {
+        "id": "test_020",
+        "question": "What is the BrainDrive Marketplace?",
+        "ground_truth": "The BrainDrive Marketplace is a self-sustaining ecosystem that enables community members to share, sell, and exchange plugins and services. It supports monetary, trade, and community credit transactions with a decentralized structure and fair owner-first economics.",
+        "category": "marketplace"
+      },
+      {
+        "id": "test_021",
+        "question": "What is the current version status of BrainDrive?",
+        "ground_truth": "BrainDrive is currently in open beta at version 0.6.x, with core features like the plugin manager, page builder, and basic chat interface operational and being polished for early adopters.",
+        "category": "project_status"
+      },
+      {
+        "id": "test_022",
+        "question": "What prerequisites are needed to install BrainDrive?",
+        "ground_truth": "To install BrainDrive, you need Conda (Anaconda/Miniconda) for Python environment management, Git to clone the repository, and Node.js version 16.x or higher with npm for the frontend build.",
+        "category": "installation"
+      },
+      {
+        "id": "test_023",
+        "question": "How can developers achieve a 1-minute development cycle for plugins?",
+        "ground_truth": "Developers can achieve a 1-minute cycle by configuring the plugin's webpack output path to point directly to the BrainDrive backend/plugins/shared directory. This way, running npm run build places updated code where the backend can serve it immediately, eliminating the need to reinstall the plugin on each change.",
+        "category": "plugin_development"
+      },
+      {
+        "id": "test_024",
+        "question": "What is the Plugin Template and how is it used?",
+        "ground_truth": "The Plugin Template is an official BrainDrive repository that contains boilerplate code for creating new plugins. Developers can fork or clone this template as a starting point instead of building from scratch, and can install it using its GitHub URL to test the basic structure.",
+        "category": "plugin_development"
+      },
+      {
+        "id": "test_025",
+        "question": "What REST API endpoints are available for plugin management?",
+        "ground_truth": "The universal plugin API endpoints include: POST /api/plugins/{plugin_slug}/install, DELETE /api/plugins/{plugin_slug}/uninstall, GET /api/plugins/{plugin_slug}/status, GET /api/plugins/{plugin_slug}/info, POST /api/plugins/{plugin_slug}/repair, and GET /api/plugins/available.",
+        "category": "api_endpoints"
+      },
+      {
+        "id": "test_026",
+        "question": "How does BrainDrive support multi-user environments?",
+        "ground_truth": "BrainDrive has multi-tenant capabilities with granular user permissions. The plugin system is user-scoped, meaning each user can have their own set of plugins installed without affecting others. The backend includes user management endpoints and a system of user updaters that run on each login.",
+        "category": "backend_features"
+      },
+      {
+        "id": "test_027",
+        "question": "What is the recommended way to run BrainDrive in production?",
+        "ground_truth": "For production, set APP_ENV=prod in backend/.env with DEBUG=false and RELOAD=false. Run the backend with a process manager like systemd or supervisor using a command like 'uvicorn main:app --host 0.0.0.0 --port 8005 --workers 4'. Build the frontend with 'npm run build' and serve the static files.",
+        "category": "deployment"
+      },
+      {
+        "id": "test_028",
+        "question": "Where can users get help and support for BrainDrive?",
+        "ground_truth": "Users can get help through the BrainDrive Community Forum at community.braindrive.ai, by opening GitHub issues for bug reports or feature suggestions, through the Documentation Index on GitHub, or by contacting the team directly for security vulnerabilities.",
+        "category": "community_support"
+      },
+      {
+        "id": "test_029",
+        "question": "What makes BrainDrive different from traditional AI platforms like ChatGPT?",
+        "ground_truth": "BrainDrive is self-hosted and open-source with an MIT license, giving users complete ownership and control. Unlike proprietary platforms, there is no Big Tech lock-in, users decide where to host it, can fully customize it through plugins, and can even monetize their custom solutions.",
+        "category": "general_overview"
+      },
+      {
+        "id": "test_030",
+        "question": "What is the purpose of BrainDrive LLC in the ecosystem?",
+        "ground_truth": "BrainDrive LLC serves as the initial node in a decentralized network of businesses, not as a controlling center. It provides optional managed hosting, support services, development leadership for coordinating community contributions, and vision stewardship for promoting user-owned AI principles.",
+        "category": "business_model"
+      }
+    ],
+    "metadata": {
+      "total_questions": 30,
+      "source_documents": [
+        "BrainDrive___Self-Hosted_AI_Platform__Full_Context_.pdf",
+        "The_5_Components_of_BrainDrive__1_.pdf"
+      ],
+      "categories": [
+        "general_overview",
+        "licensing",
+        "backend_tech",
+        "frontend_tech",
+        "installation",
+        "architecture",
+        "features",
+        "plugin_management",
+        "plugin_development",
+        "vision_mission",
+        "marketplace",
+        "project_status",
+        "api_endpoints",
+        "backend_features",
+        "deployment",
+        "community_support",
+        "business_model"
+      ],
+      "created_date": "2025-11-04",
+      "purpose": "Week 1 evaluation test data for RAG system factual accuracy testing"
+    }
+  }
+  

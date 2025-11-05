@@ -26,6 +26,8 @@ from .adapters.search.rank_fusion_adapter import HybridRankFusionAdapter
 from .adapters.persistence.sqlite_repository import (
     SQLiteDocumentRepository, SQLiteCollectionRepository, SQLiteChatRepository
 )
+from .adapters.persistence.evaluation_repository import SQLiteEvaluationRepository
+from .adapters.judge.langchain_evaluation_service import LangChainEvaluationService
 
 # Imports for routers
 from .api.routes.documents import router as documents_router
@@ -34,6 +36,7 @@ from .api.routes.search_u import router as search_router
 from .api.routes.chat import router as chat_router
 from .api.routes.health import router as health_router
 from .api.routes.web import router as web_router
+from .api.routes.evaluation import router as evaluation_router
 
 
 app = FastAPI(
@@ -197,6 +200,68 @@ async def on_startup():
     app.state.collection_repo = collection_repo
     app.state.chat_repo = chat_repo
 
+    # Evaluation services initialization (always initialized)
+    logger.info("Initializing evaluation services...")
+
+    # Judge service (LangChain with OpenAI)
+    if not settings.OPENAI_EVALUATION_API_KEY:
+        logger.warning("⚠️  OPENAI_EVALUATION_API_KEY not set. Judge service unavailable.")
+        app.state.judge_service = None
+    else:
+        app.state.judge_service = LangChainEvaluationService(
+            api_key=settings.OPENAI_EVALUATION_API_KEY.get_secret_value(),
+            model_name=settings.OPENAI_EVALUATION_MODEL,
+            timeout=settings.OPENAI_EVALUATION_TIMEOUT
+        )
+        logger.info(f"✅ Initialized judge service with model: {settings.OPENAI_EVALUATION_MODEL}")
+
+    # Evaluation repository (always initialized)
+    evaluation_repo = SQLiteEvaluationRepository(settings.DATABASE_URL)
+    await evaluation_repo.init_models()
+    app.state.evaluation_repo = evaluation_repo
+    logger.info("✅ Initialized evaluation repository")
+
+    # Initialize test collection (only if flag is true)
+    if settings.INITIALIZE_TEST_COLLECTION:
+        logger.info("Initializing test collection...")
+
+        from .core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
+        from .core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
+
+        # Create document processing use case for test collection initialization
+        doc_processing_use_case = SimplifiedDocumentProcessingUseCase(
+            document_repo=document_repo,
+            collection_repo=collection_repo,
+            document_processor=app.state.document_processor,
+            embedding_service=app.state.embedding_service,
+            vector_store=app.state.vector_store,
+            llm_service=app.state.llm_service,
+            contextual_llm=app.state.contextual_llm_service,
+            bm25_service=app.state.bm25_service,
+        )
+
+        init_test_collection_use_case = InitializeTestCollectionUseCase(
+            collection_repo=collection_repo,
+            document_repo=document_repo,
+            document_processing_use_case=doc_processing_use_case,
+            test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
+            test_collection_name=settings.EVALUATION_TEST_COLLECTION_NAME,
+            test_docs_dir=settings.EVALUATION_TEST_DOCS_DIR
+        )
+
+        # Initialize test collection if needed
+        try:
+            initialized = await init_test_collection_use_case.initialize_if_needed()
+            if initialized:
+                logger.info("✅ Evaluation test collection initialized successfully")
+            else:
+                logger.info("✅ Evaluation test collection already exists")
+        except Exception as e:
+            logger.error(f"⚠️  Failed to initialize evaluation test collection: {str(e)}")
+            # Don't fail startup if test collection initialization fails
+    else:
+        logger.info("⚠️  Test collection initialization disabled (INITIALIZE_TEST_COLLECTION=false)")
+
     logger.info("Startup complete: adapters instantiated")
 
 
@@ -338,4 +403,10 @@ app.include_router(
     web_router,
     prefix="",
     tags=["web"]
+)
+
+app.include_router(
+    evaluation_router,
+    prefix="/api/evaluation",
+    tags=["evaluation"]
 )

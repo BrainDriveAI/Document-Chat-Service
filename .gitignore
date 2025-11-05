@@ -10,6 +10,7 @@ venv/
 Dockerfile.dev
 
 *.json
+!evaluation_test_docs/test_cases.json
 
 data
 
@@ -22,3 +23,7 @@ CLAUDE.md
 .cursorrules
 TASKS.md
 .changeset/
+
+# Evaluation docs
+FRONTEND_EVALUATION_API_UPDATES.md
+evaludation_flow_summary_client_side.md

@@ -306,7 +306,7 @@ async function handleSearch(event) {
         });
 
         // Display results
-        displaySearchResults(results, searchParams);
+        displaySearchResults(results.chunks, searchParams);
 
         // Restore button state
         searchBtn.disabled = false;

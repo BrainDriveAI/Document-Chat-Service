@@ -22,3 +22,9 @@ async def index_page(request: Request):
 async def chat_page(request: Request):
     """Serve the chat interface page"""
     return templates.TemplateResponse("chat.html", {"request": request})
+
+
+@router.get("/evaluation", response_class=HTMLResponse)
+async def evaluation_page(request: Request):
+    """Serve the evaluation interface page"""
+    return templates.TemplateResponse("evaluation.html", {"request": request})
