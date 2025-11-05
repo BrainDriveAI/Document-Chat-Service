@@ -62,6 +62,21 @@ class SubmitPluginEvaluationRequest(BaseModel):
     submissions: List[SubmissionItem]
 
 
+class StartWithQuestionsRequest(BaseModel):
+    """Request model for starting evaluation with custom questions"""
+    collection_id: str
+    questions: List[str]
+
+    @classmethod
+    def model_validate(cls, obj):
+        """Validate the model"""
+        if not obj.get("collection_id"):
+            raise ValueError("collection_id is required")
+        if not obj.get("questions") or len(obj["questions"]) == 0:
+            raise ValueError("questions array is required and must not be empty")
+        return super().model_validate(obj)
+
+
 class SubmitPluginEvaluationResponse(BaseModel):
     """Response model for plugin evaluation submission"""
     evaluation_run_id: str
@@ -194,6 +209,41 @@ async def start_plugin_evaluation(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to start plugin evaluation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start plugin evaluation: {str(e)}")
+
+
+@router.post("/plugin/start-with-questions", response_model=StartPluginEvaluationResponse)
+async def start_plugin_evaluation_with_questions(
+    request: StartWithQuestionsRequest,
+    start_plugin_evaluation_use_case: StartPluginEvaluationUseCase = Depends(get_start_plugin_evaluation_use_case),
+):
+    """
+    Start a plugin-based evaluation with custom questions.
+
+    Creates an evaluation run and retrieves context for provided questions.
+    Returns evaluation_run_id and test data (questions + context) for plugin to generate answers.
+    """
+    try:
+        logger.info(f"Starting plugin evaluation with {len(request.questions)} custom questions for collection {request.collection_id}")
+
+        result = await start_plugin_evaluation_use_case.execute_with_questions(
+            collection_id=request.collection_id,
+            questions=request.questions
+        )
+
+        return StartPluginEvaluationResponse(
+            evaluation_run_id=result["evaluation_run_id"],
+            test_data=[TestDataItem(**item) for item in result["test_data"]]
+        )
+
+    except ValueError as e:
+        logger.error(f"Invalid input: {str(e)}")
+        # Check if it's a collection not found error
+        if "Collection not found" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to start plugin evaluation with questions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to start plugin evaluation: {str(e)}")
 
 

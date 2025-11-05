@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -95,6 +96,98 @@ class StartPluginEvaluationUseCase:
             })
 
         logger.info(f"Retrieved context for {len(test_data)} test cases")
+
+        return {
+            "evaluation_run_id": evaluation_run.id,
+            "test_data": test_data
+        }
+
+    async def execute_with_questions(
+        self,
+        collection_id: str,
+        questions: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Start plugin evaluation with custom questions.
+
+        Args:
+            collection_id: ID of collection to evaluate against
+            questions: List of question strings
+
+        Returns:
+            Dict with:
+                - evaluation_run_id: str
+                - test_data: List[Dict] with test_case_id, question, retrieved_context
+
+        Raises:
+            ValueError: If collection not found or questions list is empty
+        """
+        logger.info(f"Starting plugin evaluation with {len(questions)} custom questions")
+
+        # Validate input
+        if not questions or len(questions) == 0:
+            raise ValueError("Questions list cannot be empty")
+
+        # Verify collection exists
+        collection = await self._collection_repo.find_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+
+        # Create test cases from questions (generate IDs and set category)
+        test_cases = [
+            TestCase(
+                id=str(uuid.uuid4()),
+                question=question,
+                category="custom",
+                ground_truth=None
+            )
+            for question in questions
+        ]
+
+        logger.info(f"Created {len(test_cases)} test cases from custom questions")
+
+        # Create evaluation run
+        config_snapshot = {
+            "collection_id": collection_id,
+            "evaluation_type": "plugin_custom",
+            "questions_count": len(questions)
+        }
+
+        evaluation_run = EvaluationRun.create(
+            collection_id=collection_id,
+            total_questions=len(test_cases),
+            config_snapshot=config_snapshot
+        )
+
+        await self._evaluation_repo.save_run(evaluation_run)
+        logger.info(f"Created evaluation run: {evaluation_run.id}")
+
+        # Retrieve context for each question
+        test_data = []
+        for test_case in test_cases:
+            logger.debug(f"Retrieving context for question: {test_case.question[:50]}...")
+
+            context = await self._context_retrieval.retrieve_context(
+                query_text=test_case.question,
+                collection_id=collection_id,
+                top_k=5,
+                use_hybrid=True
+            )
+
+            retrieved_context = "\n\n".join([
+                f"[Chunk {i+1}]\n{chunk.content}"
+                for i, chunk in enumerate(context.chunks)
+            ])
+
+            test_data.append({
+                "test_case_id": test_case.id,
+                "question": test_case.question,
+                "category": test_case.category,
+                "retrieved_context": retrieved_context,
+                "ground_truth": test_case.ground_truth
+            })
+
+        logger.info(f"Retrieved context for {len(test_data)} custom questions")
 
         return {
             "evaluation_run_id": evaluation_run.id,
