@@ -42,7 +42,7 @@ The judge evaluates answers based on:
 poetry install
 
 # Ensure you have OpenAI API key
-export OPENAI_API_KEY=your_openai_api_key
+export OPENAI_EVALUATION_API_KEY=your_openai_api_key
 ```
 
 ### 2. Configuration
@@ -51,10 +51,10 @@ Add to `.env`:
 
 ```bash
 # Enable evaluation initialization
-INITIALIZE_EVALUATION=true
+INITIALIZE_EVALUATION=false
 
 # OpenAI for judge service
-OPENAI_API_KEY=sk-...
+OPENAI_EVALUATION_API_KEY=sk-...
 OPENAI_EVALUATION_MODEL=gpt-5-mini
 OPENAI_EVALUATION_TIMEOUT=60
 
@@ -104,7 +104,7 @@ evaluation_test_docs/
 
 ### 4. Start Application
 
-On first startup with `INITIALIZE_EVALUATION=true`:
+On first startup with `INITIALIZE_EVALUATION=false`:
 
 ```bash
 uvicorn app.main:app --reload
@@ -266,9 +266,9 @@ curl http://localhost:8000/api/evaluation/runs
 
 ### Evaluation initialization fails
 
-**Issue**: `INITIALIZE_EVALUATION=true but OPENAI_API_KEY not set`
+**Issue**: `INITIALIZE_EVALUATION=false but OPENAI_EVALUATION_API_KEY not set`
 
-**Solution**: Set `OPENAI_API_KEY` in `.env` file
+**Solution**: Set `OPENAI_EVALUATION_API_KEY` in `.env` file
 
 ---
 

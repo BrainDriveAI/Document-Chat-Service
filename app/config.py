@@ -44,9 +44,9 @@ class AppSettings(BaseSettings):
     )
 
     # OpenAI (for Evaluation)
-    OPENAI_API_KEY: Optional[SecretStr] = Field(
+    OPENAI_EVALUATION_API_KEY: Optional[SecretStr] = Field(
         default=None,
-        env="OPENAI_API_KEY",
+        env="OPENAI_EVALUATION_API_KEY",
         description="OpenAI API key for evaluation judge service."
     )
     OPENAI_EVALUATION_MODEL: str = Field(
@@ -62,7 +62,7 @@ class AppSettings(BaseSettings):
 
     # Evaluation Settings
     INITIALIZE_EVALUATION: bool = Field(
-        default=True,
+        default=False,
         env="INITIALIZE_EVALUATION",
         description="Whether to initialize evaluation system on startup."
     )

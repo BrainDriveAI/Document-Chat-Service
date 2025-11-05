@@ -205,14 +205,14 @@ async def on_startup():
         logger.info("Initializing evaluation services...")
 
         # Check if OpenAI API key is provided
-        if not settings.OPENAI_API_KEY:
-            logger.warning("⚠️  INITIALIZE_EVALUATION=true but OPENAI_API_KEY not set. Skipping evaluation initialization.")
+        if not settings.OPENAI_EVALUATION_API_KEY:
+            logger.warning("⚠️  INITIALIZE_EVALUATION=false but OPENAI_EVALUATION_API_KEY not set. Skipping evaluation initialization.")
             app.state.judge_service = None
             app.state.evaluation_repo = None
         else:
             # Judge service (LangChain with OpenAI)
             app.state.judge_service = LangChainEvaluationService(
-                api_key=settings.OPENAI_API_KEY.get_secret_value(),
+                api_key=settings.OPENAI_EVALUATION_API_KEY.get_secret_value(),
                 model_name=settings.OPENAI_EVALUATION_MODEL,
                 timeout=settings.OPENAI_EVALUATION_TIMEOUT
             )
