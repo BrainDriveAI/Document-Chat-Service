@@ -61,10 +61,10 @@ class AppSettings(BaseSettings):
     )
 
     # Evaluation Settings
-    INITIALIZE_EVALUATION: bool = Field(
+    INITIALIZE_TEST_COLLECTION: bool = Field(
         default=False,
-        env="INITIALIZE_EVALUATION",
-        description="Whether to initialize evaluation system on startup."
+        env="INITIALIZE_TEST_COLLECTION",
+        description="Whether to initialize evaluation test collection on startup. Evaluation services (judge, repo) always initialize."
     )
     EVALUATION_TEST_COLLECTION_ID: str = Field(
         default="eval-test-collection-00000000-0000-0000-0000-000000000001",

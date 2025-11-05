@@ -556,7 +556,7 @@ Backend configuration (`.env`):
 
 ```bash
 # Evaluation settings
-INITIALIZE_EVALUATION=false
+INITIALIZE_TEST_COLLECTION=false
 EVALUATION_TEST_COLLECTION_ID=eval-test-collection-00000000-0000-0000-0000-000000000001
 
 # OpenAI judge service
@@ -571,7 +571,7 @@ EVALUATION_TEST_DOCS_DIR=./evaluation_test_docs
 ## Troubleshooting
 
 ### "Test collection not found"
-Ensure `INITIALIZE_EVALUATION=false` and restart backend to initialize test collection.
+Ensure `INITIALIZE_TEST_COLLECTION=true` and restart backend to initialize test collection.
 
 ### "Evaluation run not found"
 Check `evaluation_run_id` is correct. Each run has unique ID from start endpoint.

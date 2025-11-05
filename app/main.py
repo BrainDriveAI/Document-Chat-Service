@@ -200,69 +200,67 @@ async def on_startup():
     app.state.collection_repo = collection_repo
     app.state.chat_repo = chat_repo
 
-    # Evaluation services initialization
-    if settings.INITIALIZE_EVALUATION:
-        logger.info("Initializing evaluation services...")
+    # Evaluation services initialization (always initialized)
+    logger.info("Initializing evaluation services...")
 
-        # Check if OpenAI API key is provided
-        if not settings.OPENAI_EVALUATION_API_KEY:
-            logger.warning("⚠️  INITIALIZE_EVALUATION=false but OPENAI_EVALUATION_API_KEY not set. Skipping evaluation initialization.")
-            app.state.judge_service = None
-            app.state.evaluation_repo = None
-        else:
-            # Judge service (LangChain with OpenAI)
-            app.state.judge_service = LangChainEvaluationService(
-                api_key=settings.OPENAI_EVALUATION_API_KEY.get_secret_value(),
-                model_name=settings.OPENAI_EVALUATION_MODEL,
-                timeout=settings.OPENAI_EVALUATION_TIMEOUT
-            )
-            logger.info(f"✅ Initialized judge service with model: {settings.OPENAI_EVALUATION_MODEL}")
-
-            # Evaluation repository
-            evaluation_repo = SQLiteEvaluationRepository(settings.DATABASE_URL)
-            await evaluation_repo.init_models()
-            app.state.evaluation_repo = evaluation_repo
-            logger.info("✅ Initialized evaluation repository")
-
-            # Initialize test collection (if needed)
-            from .core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
-            from .core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
-
-            # Create document processing use case for test collection initialization
-            doc_processing_use_case = SimplifiedDocumentProcessingUseCase(
-                document_repo=document_repo,
-                collection_repo=collection_repo,
-                document_processor=app.state.document_processor,
-                embedding_service=app.state.embedding_service,
-                vector_store=app.state.vector_store,
-                llm_service=app.state.llm_service,
-                contextual_llm=app.state.contextual_llm_service,
-                bm25_service=app.state.bm25_service,
-            )
-
-            init_test_collection_use_case = InitializeTestCollectionUseCase(
-                collection_repo=collection_repo,
-                document_repo=document_repo,
-                document_processing_use_case=doc_processing_use_case,
-                test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
-                test_collection_name=settings.EVALUATION_TEST_COLLECTION_NAME,
-                test_docs_dir=settings.EVALUATION_TEST_DOCS_DIR
-            )
-
-            # Initialize test collection if needed
-            try:
-                initialized = await init_test_collection_use_case.initialize_if_needed()
-                if initialized:
-                    logger.info("✅ Evaluation test collection initialized successfully")
-                else:
-                    logger.info("✅ Evaluation test collection already exists")
-            except Exception as e:
-                logger.error(f"⚠️  Failed to initialize evaluation test collection: {str(e)}")
-                # Don't fail startup if evaluation initialization fails
-    else:
-        logger.info("⚠️  Evaluation initialization disabled (INITIALIZE_EVALUATION=false)")
+    # Judge service (LangChain with OpenAI)
+    if not settings.OPENAI_EVALUATION_API_KEY:
+        logger.warning("⚠️  OPENAI_EVALUATION_API_KEY not set. Judge service unavailable.")
         app.state.judge_service = None
-        app.state.evaluation_repo = None
+    else:
+        app.state.judge_service = LangChainEvaluationService(
+            api_key=settings.OPENAI_EVALUATION_API_KEY.get_secret_value(),
+            model_name=settings.OPENAI_EVALUATION_MODEL,
+            timeout=settings.OPENAI_EVALUATION_TIMEOUT
+        )
+        logger.info(f"✅ Initialized judge service with model: {settings.OPENAI_EVALUATION_MODEL}")
+
+    # Evaluation repository (always initialized)
+    evaluation_repo = SQLiteEvaluationRepository(settings.DATABASE_URL)
+    await evaluation_repo.init_models()
+    app.state.evaluation_repo = evaluation_repo
+    logger.info("✅ Initialized evaluation repository")
+
+    # Initialize test collection (only if flag is true)
+    if settings.INITIALIZE_TEST_COLLECTION:
+        logger.info("Initializing test collection...")
+
+        from .core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
+        from .core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
+
+        # Create document processing use case for test collection initialization
+        doc_processing_use_case = SimplifiedDocumentProcessingUseCase(
+            document_repo=document_repo,
+            collection_repo=collection_repo,
+            document_processor=app.state.document_processor,
+            embedding_service=app.state.embedding_service,
+            vector_store=app.state.vector_store,
+            llm_service=app.state.llm_service,
+            contextual_llm=app.state.contextual_llm_service,
+            bm25_service=app.state.bm25_service,
+        )
+
+        init_test_collection_use_case = InitializeTestCollectionUseCase(
+            collection_repo=collection_repo,
+            document_repo=document_repo,
+            document_processing_use_case=doc_processing_use_case,
+            test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
+            test_collection_name=settings.EVALUATION_TEST_COLLECTION_NAME,
+            test_docs_dir=settings.EVALUATION_TEST_DOCS_DIR
+        )
+
+        # Initialize test collection if needed
+        try:
+            initialized = await init_test_collection_use_case.initialize_if_needed()
+            if initialized:
+                logger.info("✅ Evaluation test collection initialized successfully")
+            else:
+                logger.info("✅ Evaluation test collection already exists")
+        except Exception as e:
+            logger.error(f"⚠️  Failed to initialize evaluation test collection: {str(e)}")
+            # Don't fail startup if test collection initialization fails
+    else:
+        logger.info("⚠️  Test collection initialization disabled (INITIALIZE_TEST_COLLECTION=false)")
 
     logger.info("Startup complete: adapters instantiated")
 

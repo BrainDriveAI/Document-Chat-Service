@@ -50,8 +50,8 @@ export OPENAI_EVALUATION_API_KEY=your_openai_api_key
 Add to `.env`:
 
 ```bash
-# Enable evaluation initialization
-INITIALIZE_EVALUATION=false
+# Enable test collection initialization (evaluation services always available)
+INITIALIZE_TEST_COLLECTION=false
 
 # OpenAI for judge service
 OPENAI_EVALUATION_API_KEY=sk-...
@@ -104,7 +104,7 @@ evaluation_test_docs/
 
 ### 4. Start Application
 
-On first startup with `INITIALIZE_EVALUATION=false`:
+On first startup with `INITIALIZE_TEST_COLLECTION=false`:
 
 ```bash
 uvicorn app.main:app --reload
@@ -266,7 +266,7 @@ curl http://localhost:8000/api/evaluation/runs
 
 ### Evaluation initialization fails
 
-**Issue**: `INITIALIZE_EVALUATION=false but OPENAI_EVALUATION_API_KEY not set`
+**Issue**: `OPENAI_EVALUATION_API_KEY not set`
 
 **Solution**: Set `OPENAI_EVALUATION_API_KEY` in `.env` file
 
@@ -300,17 +300,16 @@ curl http://localhost:8000/api/evaluation/runs
 
 ## Disable Evaluation
 
-To disable evaluation system:
+To disable test collection initialization:
 
 ```bash
-INITIALIZE_EVALUATION=false
+INITIALIZE_TEST_COLLECTION=false
 ```
 
 This will:
-- Skip judge service initialization
-- Skip evaluation repository setup
-- Skip test collection initialization
-- Evaluation API endpoints will return 500 errors
+- Skip test collection initialization only
+- Evaluation services (judge, repo) remain available
+- Can still use evaluation endpoints with custom questions (e.g., `/api/evaluation/plugin/start-with-questions`)
 
 ## Future Enhancements
 
