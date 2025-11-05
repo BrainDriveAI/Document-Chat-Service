@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: chat-with-docs-app-test
+    container_name: chat-with-docs-app
     env_file:
       - .env
     ports:
