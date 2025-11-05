@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
@@ -14,6 +15,7 @@ from ...core.use_cases.evaluation.get_results import GetEvaluationResultsUseCase
 from ...core.use_cases.evaluation.start_plugin_evaluation import StartPluginEvaluationUseCase
 from ...core.use_cases.evaluation.submit_plugin_evaluation import SubmitPluginEvaluationUseCase
 from ...core.domain.exceptions import EvaluationNotFoundError, EvaluationInitializationError
+from ...core.domain.entities.evaluation_config import EvaluationConfig, PersonaConfig, ModelSettings
 from ...config import settings
 
 router = APIRouter()
@@ -62,10 +64,66 @@ class SubmitPluginEvaluationRequest(BaseModel):
     submissions: List[SubmissionItem]
 
 
+class ModelSettingsRequest(BaseModel):
+    """API model for model settings"""
+    temperature: float = 0.7
+    top_p: float = 0.9
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    context_window: int = 4000
+    stop_sequences: List[str] = []
+
+
+class PersonaConfigRequest(BaseModel):
+    """API model for persona configuration"""
+    id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+    model_settings: ModelSettingsRequest = ModelSettingsRequest()
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    def to_domain(self) -> PersonaConfig:
+        """Convert to domain entity"""
+        created_at = None
+        if self.created_at:
+            try:
+                created_at = datetime.fromisoformat(self.created_at.replace('Z', '+00:00'))
+            except:
+                pass
+
+        updated_at = None
+        if self.updated_at:
+            try:
+                updated_at = datetime.fromisoformat(self.updated_at.replace('Z', '+00:00'))
+            except:
+                pass
+
+        return PersonaConfig(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            system_prompt=self.system_prompt,
+            model_settings=ModelSettings(
+                temperature=self.model_settings.temperature,
+                top_p=self.model_settings.top_p,
+                frequency_penalty=self.model_settings.frequency_penalty,
+                presence_penalty=self.model_settings.presence_penalty,
+                context_window=self.model_settings.context_window,
+                stop_sequences=self.model_settings.stop_sequences
+            ),
+            created_at=created_at,
+            updated_at=updated_at
+        )
+
+
 class StartWithQuestionsRequest(BaseModel):
     """Request model for starting evaluation with custom questions"""
     collection_id: str
     questions: List[str]
+    llm_model: str  # Answer generation model
+    persona: Optional[PersonaConfigRequest] = None
 
     @classmethod
     def model_validate(cls, obj):
@@ -74,6 +132,8 @@ class StartWithQuestionsRequest(BaseModel):
             raise ValueError("collection_id is required")
         if not obj.get("questions") or len(obj["questions"]) == 0:
             raise ValueError("questions array is required and must not be empty")
+        if not obj.get("llm_model"):
+            raise ValueError("llm_model is required")
         return super().model_validate(obj)
 
 
@@ -100,6 +160,23 @@ async def run_evaluation_task(
         await run_evaluation_use_case.run_evaluation(config_snapshot)
     except Exception as e:
         logger.error(f"Background evaluation task failed: {str(e)}")
+
+
+# Background task to submit plugin evaluation
+async def submit_evaluation_task(
+    submit_plugin_evaluation_use_case: SubmitPluginEvaluationUseCase,
+    evaluation_run_id: str,
+    submissions: List[Dict[str, Any]]
+):
+    """Background task to submit and judge evaluation answers"""
+    try:
+        await submit_plugin_evaluation_use_case.execute_with_questions(
+            evaluation_run_id=evaluation_run_id,
+            submissions=submissions
+        )
+        logger.info(f"Background evaluation submission completed for run: {evaluation_run_id}")
+    except Exception as e:
+        logger.error(f"Background evaluation submission failed: {str(e)}")
 
 
 @router.post("/run", response_model=EvaluationRunResponse, status_code=202)
@@ -226,9 +303,19 @@ async def start_plugin_evaluation_with_questions(
     try:
         logger.info(f"Starting plugin evaluation with {len(request.questions)} custom questions for collection {request.collection_id}")
 
+        # Create domain EvaluationConfig entity
+        # Read embedding_model and judge_model from settings
+        evaluation_config = EvaluationConfig(
+            llm_model=request.llm_model,
+            embedding_model=settings.OLLAMA_EMBEDDING_MODEL,
+            judge_model=settings.OPENAI_EVALUATION_MODEL,
+            persona=request.persona.to_domain() if request.persona else None
+        )
+
         result = await start_plugin_evaluation_use_case.execute_with_questions(
             collection_id=request.collection_id,
-            questions=request.questions
+            questions=request.questions,
+            evaluation_config=evaluation_config
         )
 
         return StartPluginEvaluationResponse(
@@ -282,34 +369,50 @@ async def submit_plugin_evaluation(
         raise HTTPException(status_code=500, detail=f"Failed to submit plugin evaluation: {str(e)}")
 
 
-@router.post("/plugin/submit-with-questions", response_model=SubmitPluginEvaluationResponse)
+@router.post("/plugin/submit-with-questions", status_code=202)
 async def submit_plugin_evaluation_with_questions(
     request: SubmitPluginEvaluationRequest,
+    background_tasks: BackgroundTasks,
     submit_plugin_evaluation_use_case: SubmitPluginEvaluationUseCase = Depends(get_submit_plugin_evaluation_use_case),
 ):
     """
     Submit answers for plugin-based evaluation with custom questions.
 
-    Receives LLM answers from plugin, judges them, and stores results.
+    Receives LLM answers from plugin, judges them in background, and stores results.
     Loads test cases from database instead of JSON file.
     Supports incremental batch submissions (idempotent).
+    Returns immediately (202 Accepted) and processes evaluation in background.
     """
     try:
-        logger.info(f"Submitting {len(request.submissions)} answers for evaluation run (with questions): {request.evaluation_run_id}")
+        logger.info(f"Queuing {len(request.submissions)} answers for evaluation run (with questions): {request.evaluation_run_id}")
+
+        # Validate evaluation run exists
+        evaluation_run = await submit_plugin_evaluation_use_case._evaluation_repo.find_run_by_id(request.evaluation_run_id)
+        if not evaluation_run:
+            raise HTTPException(status_code=404, detail=f"Evaluation run not found: {request.evaluation_run_id}")
 
         # Convert Pydantic models to dicts
         submissions = [item.model_dump() for item in request.submissions]
 
-        result = await submit_plugin_evaluation_use_case.execute_with_questions(
-            evaluation_run_id=request.evaluation_run_id,
-            submissions=submissions
+        # Add to background tasks
+        background_tasks.add_task(
+            submit_evaluation_task,
+            submit_plugin_evaluation_use_case,
+            request.evaluation_run_id,
+            submissions
         )
 
-        return SubmitPluginEvaluationResponse(**result)
+        return {
+            "message": "Evaluation submission queued for processing",
+            "evaluation_run_id": request.evaluation_run_id,
+            "submitted_count": len(submissions)
+        }
 
+    except HTTPException:
+        raise
     except ValueError as e:
         logger.error(f"Invalid input: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Failed to submit plugin evaluation with questions: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to submit plugin evaluation: {str(e)}")
+        logger.error(f"Failed to queue evaluation submission: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to queue evaluation submission: {str(e)}")

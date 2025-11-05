@@ -2,9 +2,10 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from ...domain.entities.evaluation import EvaluationRun, TestCase
+from ...domain.entities.evaluation_config import EvaluationConfig
 from ...ports.evaluation_repository import EvaluationRepository
 from ...ports.repositories import CollectionRepository
 from ..context_retrieval import ContextRetrievalUseCase
@@ -105,7 +106,8 @@ class StartPluginEvaluationUseCase:
     async def execute_with_questions(
         self,
         collection_id: str,
-        questions: List[str]
+        questions: List[str],
+        evaluation_config: Optional[EvaluationConfig] = None
     ) -> Dict[str, Any]:
         """
         Start plugin evaluation with custom questions.
@@ -113,6 +115,7 @@ class StartPluginEvaluationUseCase:
         Args:
             collection_id: ID of collection to evaluate against
             questions: List of question strings
+            evaluation_config: Optional EvaluationConfig domain entity
 
         Returns:
             Dict with:
@@ -146,12 +149,16 @@ class StartPluginEvaluationUseCase:
 
         logger.info(f"Created {len(test_cases)} test cases from custom questions")
 
-        # Create evaluation run
+        # Create config snapshot with evaluation config
         config_snapshot = {
             "collection_id": collection_id,
             "evaluation_type": "plugin_custom",
             "questions_count": len(questions)
         }
+
+        # Add evaluation config if provided
+        if evaluation_config:
+            config_snapshot.update(evaluation_config.to_dict())
 
         evaluation_run = EvaluationRun.create(
             collection_id=collection_id,
