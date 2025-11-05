@@ -1,6 +1,6 @@
 import json
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, Boolean, Float, select, desc
@@ -156,7 +156,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                 correct_count=result.correct_count,
                 incorrect_count=result.incorrect_count,
                 evaluated_count=result.evaluated_count,
-                run_date=result.run_date,
+                run_date=result.run_date.replace(tzinfo=UTC) if result.run_date.tzinfo is None else result.run_date,
                 duration_seconds=result.duration_seconds,
                 config_snapshot=result.config_snapshot
             )
@@ -184,7 +184,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     judge_reasoning=model.judge_reasoning,
                     judge_factual_errors=model.judge_factual_errors,
                     judge_missing_info=model.judge_missing_info,
-                    created_at=model.created_at
+                    created_at=model.created_at.replace(tzinfo=UTC) if model.created_at.tzinfo is None else model.created_at
                 )
                 for model in models
             ]
@@ -208,7 +208,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     correct_count=model.correct_count,
                     incorrect_count=model.incorrect_count,
                     evaluated_count=model.evaluated_count,
-                    run_date=model.run_date,
+                    run_date=model.run_date.replace(tzinfo=UTC) if model.run_date.tzinfo is None else model.run_date,
                     duration_seconds=model.duration_seconds,
                     config_snapshot=model.config_snapshot
                 )
