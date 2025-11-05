@@ -6,12 +6,23 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, Boolean, Float, select, desc
 
 from ...core.ports.evaluation_repository import EvaluationRepository
-from ...core.domain.entities.evaluation import EvaluationRun, EvaluationResult, EvaluationStatus
+from ...core.domain.entities.evaluation import EvaluationRun, EvaluationResult, EvaluationStatus, TestCase
 
 Base = declarative_base()
 
 
 # ORM models
+class EvaluationTestCaseModel(Base):
+    __tablename__ = "evaluation_test_cases"
+
+    id = Column(String, primary_key=True)
+    evaluation_run_id = Column(String, ForeignKey("evaluation_runs.id"), nullable=False)
+    test_case_id = Column(String, nullable=False, index=True)
+    question = Column(Text, nullable=False)
+    category = Column(String, nullable=False)
+    ground_truth = Column(Text, nullable=True)
+
+
 class EvaluationRunModel(Base):
     __tablename__ = "evaluation_runs"
 
@@ -224,3 +235,38 @@ class SQLiteEvaluationRepository(EvaluationRepository):
 
             result = await db_session.execute(stmt)
             return list(result.scalars().all())
+
+    async def save_test_cases(self, evaluation_run_id: str, test_cases: List[TestCase]) -> None:
+        """Save test cases for an evaluation run"""
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                for test_case in test_cases:
+                    model = EvaluationTestCaseModel(
+                        id=f"{evaluation_run_id}_{test_case.id}",
+                        evaluation_run_id=evaluation_run_id,
+                        test_case_id=test_case.id,
+                        question=test_case.question,
+                        category=test_case.category,
+                        ground_truth=test_case.ground_truth
+                    )
+                    db_session.add(model)
+
+    async def find_test_cases_by_run_id(self, run_id: str) -> List[TestCase]:
+        """Find all test cases for an evaluation run"""
+        async with self._async_session() as db_session:
+            stmt = select(EvaluationTestCaseModel).where(
+                EvaluationTestCaseModel.evaluation_run_id == run_id
+            )
+
+            result = await db_session.execute(stmt)
+            models = result.scalars().all()
+
+            return [
+                TestCase(
+                    id=model.test_case_id,
+                    question=model.question,
+                    category=model.category,
+                    ground_truth=model.ground_truth
+                )
+                for model in models
+            ]

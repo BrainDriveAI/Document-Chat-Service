@@ -162,6 +162,10 @@ class StartPluginEvaluationUseCase:
         await self._evaluation_repo.save_run(evaluation_run)
         logger.info(f"Created evaluation run: {evaluation_run.id}")
 
+        # Save test cases for this evaluation run
+        await self._evaluation_repo.save_test_cases(evaluation_run.id, test_cases)
+        logger.info(f"Saved {len(test_cases)} test cases for evaluation run")
+
         # Retrieve context for each question
         test_data = []
         for test_case in test_cases:

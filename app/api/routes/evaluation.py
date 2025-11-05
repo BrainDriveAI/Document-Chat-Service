@@ -280,3 +280,36 @@ async def submit_plugin_evaluation(
     except Exception as e:
         logger.error(f"Failed to submit plugin evaluation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to submit plugin evaluation: {str(e)}")
+
+
+@router.post("/plugin/submit-with-questions", response_model=SubmitPluginEvaluationResponse)
+async def submit_plugin_evaluation_with_questions(
+    request: SubmitPluginEvaluationRequest,
+    submit_plugin_evaluation_use_case: SubmitPluginEvaluationUseCase = Depends(get_submit_plugin_evaluation_use_case),
+):
+    """
+    Submit answers for plugin-based evaluation with custom questions.
+
+    Receives LLM answers from plugin, judges them, and stores results.
+    Loads test cases from database instead of JSON file.
+    Supports incremental batch submissions (idempotent).
+    """
+    try:
+        logger.info(f"Submitting {len(request.submissions)} answers for evaluation run (with questions): {request.evaluation_run_id}")
+
+        # Convert Pydantic models to dicts
+        submissions = [item.model_dump() for item in request.submissions]
+
+        result = await submit_plugin_evaluation_use_case.execute_with_questions(
+            evaluation_run_id=request.evaluation_run_id,
+            submissions=submissions
+        )
+
+        return SubmitPluginEvaluationResponse(**result)
+
+    except ValueError as e:
+        logger.error(f"Invalid input: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to submit plugin evaluation with questions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit plugin evaluation: {str(e)}")
