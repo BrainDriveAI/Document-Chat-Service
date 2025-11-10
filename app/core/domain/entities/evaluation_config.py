@@ -103,6 +103,7 @@ class EvaluationConfig:
     embedding_model: str
     judge_model: str
     persona: Optional[PersonaConfig] = None
+    user_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for storage"""
@@ -110,7 +111,8 @@ class EvaluationConfig:
             "llm_model": self.llm_model,
             "embedding_model": self.embedding_model,
             "judge_model": self.judge_model,
-            "persona": self.persona.to_dict() if self.persona else None
+            "persona": self.persona.to_dict() if self.persona else None,
+            "user_id": self.user_id
         }
 
     @classmethod
@@ -124,5 +126,6 @@ class EvaluationConfig:
             llm_model=data["llm_model"],
             embedding_model=data["embedding_model"],
             judge_model=data["judge_model"],
-            persona=persona
+            persona=persona,
+            user_id=data.get("user_id")
         )

@@ -44,13 +44,15 @@ class EvaluationRun:
     duration_seconds: Optional[float]
     config_snapshot: Dict[str, Any]
     evaluated_count: int = 0  # Track how many questions have been evaluated
+    user_id: Optional[str] = None  # Optional user identifier for reference
 
     @classmethod
     def create(
         cls,
         collection_id: str,
         total_questions: int,
-        config_snapshot: Optional[Dict[str, Any]] = None
+        config_snapshot: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None
     ) -> "EvaluationRun":
         """Factory method to create a new evaluation run"""
         return cls(
@@ -63,7 +65,8 @@ class EvaluationRun:
             evaluated_count=0,
             run_date=datetime.now(UTC),
             duration_seconds=None,
-            config_snapshot=config_snapshot or {}
+            config_snapshot=config_snapshot or {},
+            user_id=user_id
         )
 
     def mark_running(self):
