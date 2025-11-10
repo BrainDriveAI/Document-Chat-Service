@@ -163,7 +163,8 @@ class StartPluginEvaluationUseCase:
         evaluation_run = EvaluationRun.create(
             collection_id=collection_id,
             total_questions=len(test_cases),
-            config_snapshot=config_snapshot
+            config_snapshot=config_snapshot,
+            user_id=evaluation_config.user_id if evaluation_config else None
         )
 
         await self._evaluation_repo.save_run(evaluation_run)
