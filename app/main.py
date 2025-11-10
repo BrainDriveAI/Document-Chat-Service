@@ -221,6 +221,13 @@ async def on_startup():
     app.state.evaluation_repo = evaluation_repo
     logger.info("✅ Initialized evaluation repository")
 
+    # Evaluation state repository (for state persistence)
+    from app.adapters.persistence.evaluation_repository import SQLiteEvaluationStateRepository
+    evaluation_state_repo = SQLiteEvaluationStateRepository(settings.DATABASE_URL)
+    await evaluation_state_repo.init_models()
+    app.state.evaluation_state_repo = evaluation_state_repo
+    logger.info("✅ Initialized evaluation state repository")
+
     # Initialize test collection (only if flag is true)
     if settings.INITIALIZE_TEST_COLLECTION:
         logger.info("Initializing test collection...")
