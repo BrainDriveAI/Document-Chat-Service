@@ -6,7 +6,9 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, ForeignKey, Boolean, Float, select, desc
 
 from ...core.ports.evaluation_repository import EvaluationRepository
+from ...core.ports.evaluation_state_repository import EvaluationStateRepository
 from ...core.domain.entities.evaluation import EvaluationRun, EvaluationResult, EvaluationStatus, TestCase
+from ...core.domain.entities.evaluation_state import EvaluationState
 
 Base = declarative_base()
 
@@ -36,6 +38,7 @@ class EvaluationRunModel(Base):
     run_date = Column(DateTime, nullable=False)
     duration_seconds = Column(Float, nullable=True)
     config_snapshot = Column(JSON, nullable=False)
+    user_id = Column(String, nullable=True, index=True)
 
 
 class EvaluationResultModel(Base):
@@ -52,6 +55,17 @@ class EvaluationResultModel(Base):
     judge_reasoning = Column(Text, nullable=False)
     judge_factual_errors = Column(JSON, nullable=False)
     judge_missing_info = Column(JSON, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+
+class EvaluationStateModel(Base):
+    __tablename__ = "evaluation_states"
+
+    id = Column(String, primary_key=True)
+    evaluation_run_id = Column(String, ForeignKey("evaluation_runs.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    user_id = Column(String, nullable=True, index=True)
+    state_data = Column(JSON, nullable=False)
+    last_updated = Column(DateTime, nullable=False)
     created_at = Column(DateTime, nullable=False)
 
 
@@ -80,8 +94,9 @@ class SQLiteEvaluationRepository(EvaluationRepository):
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-            # Migration: Add evaluated_count column if it doesn't exist
+            # Migrations
             await self._migrate_add_evaluated_count(conn)
+            await self._migrate_add_user_id(conn)
 
     async def _migrate_add_evaluated_count(self, conn):
         """Migration: Add evaluated_count column to evaluation_runs table"""
@@ -100,6 +115,27 @@ class SQLiteEvaluationRepository(EvaluationRepository):
             )
             print("Migration: Added evaluated_count column to evaluation_runs table")
 
+    async def _migrate_add_user_id(self, conn):
+        """Migration: Add user_id column to evaluation_runs table"""
+        from sqlalchemy import text
+
+        # Check if column exists
+        result = await conn.execute(
+            text("PRAGMA table_info(evaluation_runs)")
+        )
+        columns = [row[1] for row in result.fetchall()]
+
+        if 'user_id' not in columns:
+            # Add the column (nullable)
+            await conn.execute(
+                text("ALTER TABLE evaluation_runs ADD COLUMN user_id TEXT")
+            )
+            # Create index
+            await conn.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_evaluation_runs_user_id ON evaluation_runs(user_id)")
+            )
+            print("Migration: Added user_id column to evaluation_runs table")
+
     async def save_run(self, evaluation_run: EvaluationRun) -> EvaluationRun:
         """Save or update an evaluation run"""
         async with self._async_session() as db_session:
@@ -114,6 +150,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     existing.evaluated_count = evaluation_run.evaluated_count
                     existing.duration_seconds = evaluation_run.duration_seconds
                     existing.config_snapshot = evaluation_run.config_snapshot
+                    existing.user_id = evaluation_run.user_id
                 else:
                     # Create new run
                     model = EvaluationRunModel(
@@ -126,7 +163,8 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                         evaluated_count=evaluation_run.evaluated_count,
                         run_date=evaluation_run.run_date,
                         duration_seconds=evaluation_run.duration_seconds,
-                        config_snapshot=evaluation_run.config_snapshot
+                        config_snapshot=evaluation_run.config_snapshot,
+                        user_id=evaluation_run.user_id
                     )
                     db_session.add(model)
         return evaluation_run
@@ -169,7 +207,8 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                 evaluated_count=result.evaluated_count,
                 run_date=result.run_date.replace(tzinfo=UTC) if result.run_date.tzinfo is None else result.run_date,
                 duration_seconds=result.duration_seconds,
-                config_snapshot=result.config_snapshot
+                config_snapshot=result.config_snapshot,
+                user_id=result.user_id
             )
 
     async def find_results_by_run_id(self, run_id: str) -> List[EvaluationResult]:
@@ -221,7 +260,8 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                     evaluated_count=model.evaluated_count,
                     run_date=model.run_date.replace(tzinfo=UTC) if model.run_date.tzinfo is None else model.run_date,
                     duration_seconds=model.duration_seconds,
-                    config_snapshot=model.config_snapshot
+                    config_snapshot=model.config_snapshot,
+                    user_id=model.user_id
                 )
                 for model in models
             ]
@@ -270,3 +310,133 @@ class SQLiteEvaluationRepository(EvaluationRepository):
                 )
                 for model in models
             ]
+
+
+class SQLiteEvaluationStateRepository(EvaluationStateRepository):
+    """SQLite implementation of evaluation state repository"""
+
+    def __init__(self, database_url: str):
+        """
+        Initialize repository with database connection.
+
+        Args:
+            database_url: SQLAlchemy database URL (e.g., "sqlite+aiosqlite:///./data/app.db")
+        """
+        self._engine = create_async_engine(database_url, echo=False, future=True)
+        self._async_session = sessionmaker(
+            bind=self._engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+            future=True
+        )
+
+    async def init_models(self):
+        """Create tables if they don't exist"""
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    async def save_state(self, state: EvaluationState) -> EvaluationState:
+        """Save or update evaluation state (upsert operation)"""
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                # Check if state exists
+                stmt = select(EvaluationStateModel).where(
+                    EvaluationStateModel.evaluation_run_id == state.evaluation_run_id
+                )
+                result = await db_session.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    # Update existing state
+                    existing.user_id = state.user_id
+                    existing.state_data = state.state_data
+                    existing.last_updated = state.last_updated
+                else:
+                    # Create new state
+                    model = EvaluationStateModel(
+                        id=state.id,
+                        evaluation_run_id=state.evaluation_run_id,
+                        user_id=state.user_id,
+                        state_data=state.state_data,
+                        last_updated=state.last_updated,
+                        created_at=state.created_at
+                    )
+                    db_session.add(model)
+
+        return state
+
+    async def find_by_run_id(self, evaluation_run_id: str) -> Optional[EvaluationState]:
+        """Find evaluation state by run ID"""
+        async with self._async_session() as db_session:
+            stmt = select(EvaluationStateModel).where(
+                EvaluationStateModel.evaluation_run_id == evaluation_run_id
+            )
+            result = await db_session.execute(stmt)
+            model = result.scalar_one_or_none()
+
+            if not model:
+                return None
+
+            return EvaluationState(
+                id=model.id,
+                evaluation_run_id=model.evaluation_run_id,
+                user_id=model.user_id,
+                state_data=model.state_data,
+                last_updated=model.last_updated.replace(tzinfo=UTC) if model.last_updated.tzinfo is None else model.last_updated,
+                created_at=model.created_at.replace(tzinfo=UTC) if model.created_at.tzinfo is None else model.created_at
+            )
+
+    async def delete_by_run_id(self, evaluation_run_id: str) -> bool:
+        """Delete evaluation state by run ID (idempotent)"""
+        async with self._async_session() as db_session:
+            async with db_session.begin():
+                stmt = select(EvaluationStateModel).where(
+                    EvaluationStateModel.evaluation_run_id == evaluation_run_id
+                )
+                result = await db_session.execute(stmt)
+                model = result.scalar_one_or_none()
+
+                if model:
+                    await db_session.delete(model)
+                    return True
+
+        return False
+
+    async def list_all(
+        self,
+        user_id: Optional[str] = None,
+        include_expired: bool = False,
+        max_age_days: int = 7
+    ) -> List[EvaluationState]:
+        """List evaluation states with optional filtering"""
+        async with self._async_session() as db_session:
+            stmt = select(EvaluationStateModel).order_by(
+                desc(EvaluationStateModel.last_updated)
+            )
+
+            # Filter by user_id if provided
+            if user_id:
+                stmt = stmt.where(EvaluationStateModel.user_id == user_id)
+
+            result = await db_session.execute(stmt)
+            models = result.scalars().all()
+
+            states = []
+            for model in models:
+                state = EvaluationState(
+                    id=model.id,
+                    evaluation_run_id=model.evaluation_run_id,
+                    user_id=model.user_id,
+                    state_data=model.state_data,
+                    last_updated=model.last_updated.replace(tzinfo=UTC) if model.last_updated.tzinfo is None else model.last_updated,
+                    created_at=model.created_at.replace(tzinfo=UTC) if model.created_at.tzinfo is None else model.created_at
+                )
+
+                # Filter out expired if requested
+                if not include_expired and state.is_expired(max_age_days):
+                    continue
+
+                states.append(state)
+
+            return states
