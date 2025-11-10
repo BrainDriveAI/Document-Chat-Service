@@ -272,6 +272,15 @@ def get_evaluation_repository(request: Request) -> EvaluationRepository:
     return repo
 
 
+def get_evaluation_state_repository(request: Request):
+    """Get evaluation state repository instance from app state"""
+    from ..core.ports.evaluation_state_repository import EvaluationStateRepository
+    repo = getattr(request.app.state, "evaluation_state_repo", None)
+    if repo is None:
+        raise HTTPException(status_code=500, detail="EvaluationStateRepository not initialized")
+    return repo
+
+
 def get_judge_service(request: Request) -> JudgeService:
     """Get judge service instance from app state"""
     judge = getattr(request.app.state, "judge_service", None)
@@ -346,3 +355,44 @@ def get_submit_plugin_evaluation_use_case(
         judge_service=judge_service,
         test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
     )
+
+
+# Evaluation State dependency providers
+def get_save_evaluation_state_use_case(
+    state_repo = Depends(get_evaluation_state_repository),
+    eval_repo: EvaluationRepository = Depends(get_evaluation_repository),
+):
+    """Get save evaluation state use case"""
+    from ..core.use_cases.evaluation.save_evaluation_state import SaveEvaluationStateUseCase
+    return SaveEvaluationStateUseCase(
+        state_repository=state_repo,
+        evaluation_repository=eval_repo
+    )
+
+
+def get_load_evaluation_state_use_case(
+    state_repo = Depends(get_evaluation_state_repository),
+    eval_repo: EvaluationRepository = Depends(get_evaluation_repository),
+):
+    """Get load evaluation state use case"""
+    from ..core.use_cases.evaluation.load_evaluation_state import LoadEvaluationStateUseCase
+    return LoadEvaluationStateUseCase(
+        state_repository=state_repo,
+        evaluation_repository=eval_repo
+    )
+
+
+def get_delete_evaluation_state_use_case(
+    state_repo = Depends(get_evaluation_state_repository),
+):
+    """Get delete evaluation state use case"""
+    from ..core.use_cases.evaluation.delete_evaluation_state import DeleteEvaluationStateUseCase
+    return DeleteEvaluationStateUseCase(state_repository=state_repo)
+
+
+def get_list_evaluation_states_use_case(
+    state_repo = Depends(get_evaluation_state_repository),
+):
+    """Get list evaluation states use case"""
+    from ..core.use_cases.evaluation.list_evaluation_states import ListEvaluationStatesUseCase
+    return ListEvaluationStatesUseCase(state_repository=state_repo)
