@@ -70,7 +70,14 @@ class SubmitPluginEvaluationUseCase:
         evaluated_ids = await self._evaluation_repo.get_evaluated_test_case_ids(evaluation_run_id)
         evaluated_ids_set = set(evaluated_ids)
 
-        logger.info(f"Already evaluated: {len(evaluated_ids_set)} test cases")
+        logger.info(
+            f"Before processing: "
+            f"already_evaluated={len(evaluated_ids_set)}, "
+            f"new_submissions={len(submissions)}, "
+            f"current_evaluated_count={evaluation_run.evaluated_count}, "
+            f"total_questions={evaluation_run.total_questions}, "
+            f"current_status={evaluation_run.status.value}"
+        )
 
         # Load test cases for questions and ground truth
         test_cases_map = self._load_test_cases_map()
@@ -135,8 +142,17 @@ class SubmitPluginEvaluationUseCase:
         evaluation_run.correct_count += correct_count
         evaluation_run.incorrect_count += incorrect_count
 
+        logger.info(
+            f"Updated evaluation run {evaluation_run_id}: "
+            f"evaluated_count={evaluation_run.evaluated_count}, "
+            f"total_questions={evaluation_run.total_questions}, "
+            f"is_completed={evaluation_run.is_completed}, "
+            f"status={evaluation_run.status.value}"
+        )
+
         # Mark as completed if all questions evaluated
         if evaluation_run.is_completed:
+            logger.info(f"Marking evaluation run {evaluation_run_id} as COMPLETED")
             # Calculate duration (approximate - from run_date to now)
             duration = (datetime.now(UTC) - evaluation_run.run_date).total_seconds()
             evaluation_run.mark_completed(
@@ -144,9 +160,21 @@ class SubmitPluginEvaluationUseCase:
                 incorrect_count=evaluation_run.incorrect_count,
                 duration_seconds=duration
             )
-            logger.info(f"Evaluation run {evaluation_run_id} completed")
+            logger.info(
+                f"Evaluation run {evaluation_run_id} marked as COMPLETED: "
+                f"status={evaluation_run.status.value}, "
+                f"correct={evaluation_run.correct_count}, "
+                f"incorrect={evaluation_run.incorrect_count}, "
+                f"duration={duration:.2f}s"
+            )
+        else:
+            logger.info(
+                f"Evaluation run {evaluation_run_id} still in progress: "
+                f"{evaluation_run.evaluated_count}/{evaluation_run.total_questions} completed"
+            )
 
         await self._evaluation_repo.save_run(evaluation_run)
+        logger.info(f"Saved evaluation run {evaluation_run_id} to database")
 
         logger.info(
             f"Processed {processed_count} new submissions, skipped {skipped_count}. "
@@ -207,7 +235,14 @@ class SubmitPluginEvaluationUseCase:
         evaluated_ids = await self._evaluation_repo.get_evaluated_test_case_ids(evaluation_run_id)
         evaluated_ids_set = set(evaluated_ids)
 
-        logger.info(f"Already evaluated: {len(evaluated_ids_set)} test cases")
+        logger.info(
+            f"Before processing: "
+            f"already_evaluated={len(evaluated_ids_set)}, "
+            f"new_submissions={len(submissions)}, "
+            f"current_evaluated_count={evaluation_run.evaluated_count}, "
+            f"total_questions={evaluation_run.total_questions}, "
+            f"current_status={evaluation_run.status.value}"
+        )
 
         # Load test cases from database
         test_cases = await self._evaluation_repo.find_test_cases_by_run_id(evaluation_run_id)
@@ -278,8 +313,17 @@ class SubmitPluginEvaluationUseCase:
         evaluation_run.correct_count += correct_count
         evaluation_run.incorrect_count += incorrect_count
 
+        logger.info(
+            f"Updated evaluation run {evaluation_run_id}: "
+            f"evaluated_count={evaluation_run.evaluated_count}, "
+            f"total_questions={evaluation_run.total_questions}, "
+            f"is_completed={evaluation_run.is_completed}, "
+            f"status={evaluation_run.status.value}"
+        )
+
         # Mark as completed if all questions evaluated
         if evaluation_run.is_completed:
+            logger.info(f"Marking evaluation run {evaluation_run_id} as COMPLETED")
             # Calculate duration (approximate - from run_date to now)
             duration = (datetime.now(UTC) - evaluation_run.run_date).total_seconds()
             evaluation_run.mark_completed(
@@ -287,9 +331,21 @@ class SubmitPluginEvaluationUseCase:
                 incorrect_count=evaluation_run.incorrect_count,
                 duration_seconds=duration
             )
-            logger.info(f"Evaluation run {evaluation_run_id} completed")
+            logger.info(
+                f"Evaluation run {evaluation_run_id} marked as COMPLETED: "
+                f"status={evaluation_run.status.value}, "
+                f"correct={evaluation_run.correct_count}, "
+                f"incorrect={evaluation_run.incorrect_count}, "
+                f"duration={duration:.2f}s"
+            )
+        else:
+            logger.info(
+                f"Evaluation run {evaluation_run_id} still in progress: "
+                f"{evaluation_run.evaluated_count}/{evaluation_run.total_questions} completed"
+            )
 
         await self._evaluation_repo.save_run(evaluation_run)
+        logger.info(f"Saved evaluation run {evaluation_run_id} to database")
 
         logger.info(
             f"Processed {processed_count} new submissions, skipped {skipped_count}. "
