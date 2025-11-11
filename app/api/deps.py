@@ -25,6 +25,7 @@ from ..core.ports.evaluation_repository import EvaluationRepository
 from ..core.ports.repositories import (
     DocumentRepository, CollectionRepository, ChatRepository
 )
+from ..core.ports.model_info_service import ModelInfoService
 
 # Use-case classes
 from ..core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
@@ -80,6 +81,14 @@ def get_contextual_llm_service(request: Request) -> LLMService:
     if settings.ENABLE_CONTEXTUAL_RETRIEVAL and llm is None:
         raise HTTPException(status_code=500, detail="Contextual LLMService not initialized")
     return llm
+
+
+def get_model_info_service(request: Request) -> ModelInfoService:
+    """Get model info service instance for dynamic context window detection"""
+    model_info = getattr(request.app.state, "model_info_service", None)
+    if model_info is None:
+        raise HTTPException(status_code=500, detail="ModelInfoService not initialized")
+    return model_info
 
 
 def get_vector_store(request: Request) -> VectorStore:
@@ -243,6 +252,7 @@ def get_context_retrieval_use_case(
     query_transformation_use_case: QueryTransformationUseCase = Depends(get_query_transformation_use_case),
     intent_classification_use_case: IntentClassificationUseCase = Depends(get_intent_classification_use_case),
     collection_summary_use_case: CollectionSummaryUseCase = Depends(get_collection_summary_use_case),
+    model_info_service: ModelInfoService = Depends(get_model_info_service),
 ) -> ContextRetrievalUseCase:
     """Get context retrieval use case - the main entry point for context retrieval"""
     return ContextRetrievalUseCase(
@@ -253,6 +263,7 @@ def get_context_retrieval_use_case(
         query_transformation_use_case=query_transformation_use_case,
         intent_classification_use_case=intent_classification_use_case,
         collection_summary_use_case=collection_summary_use_case,
+        model_info_service=model_info_service,
     )
 
 
@@ -341,7 +352,8 @@ def get_start_plugin_evaluation_use_case(
         collection_repo=collection_repo,
         context_retrieval=context_retrieval_use_case,
         test_collection_id=settings.EVALUATION_TEST_COLLECTION_ID,
-        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json")
+        test_cases_path=str(Path(settings.EVALUATION_TEST_DOCS_DIR) / "test_cases.json"),
+        concurrency=settings.EVALUATION_CONCURRENCY
     )
 
 

@@ -28,6 +28,7 @@ from .adapters.persistence.sqlite_repository import (
 )
 from .adapters.persistence.evaluation_repository import SQLiteEvaluationRepository
 from .adapters.judge.langchain_evaluation_service import LangChainEvaluationService
+from .adapters.model_info.ollama_model_info import OllamaModelInfoAdapter
 
 # Imports for routers
 from .api.routes.documents import router as documents_router
@@ -162,6 +163,13 @@ async def on_startup():
     else:
         # Create a None placeholder so dependency injection doesn't fail
         app.state.contextual_llm_service = None
+
+    # Model info service (for dynamic context window detection)
+    app.state.model_info_service = OllamaModelInfoAdapter(
+        base_url=settings.OLLAMA_LLM_BASE_URL,
+        default_context_window=settings.DEFAULT_CONTEXT_WINDOW
+    )
+    logger.info(f"Initialized model info service (default context window: {settings.DEFAULT_CONTEXT_WINDOW})")
 
     await verify_ollama_services(app)
 
