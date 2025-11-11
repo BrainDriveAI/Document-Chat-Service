@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -27,13 +28,15 @@ class StartPluginEvaluationUseCase:
         collection_repo: CollectionRepository,
         context_retrieval: ContextRetrievalUseCase,
         test_collection_id: str,
-        test_cases_path: str
+        test_cases_path: str,
+        concurrency: int = 2
     ):
         self._evaluation_repo = evaluation_repo
         self._collection_repo = collection_repo
         self._context_retrieval = context_retrieval
         self._test_collection_id = test_collection_id
         self._test_cases_path = test_cases_path
+        self._concurrency = concurrency
 
     async def execute(self) -> Dict[str, Any]:
         """
@@ -174,30 +177,16 @@ class StartPluginEvaluationUseCase:
         await self._evaluation_repo.save_test_cases(evaluation_run.id, test_cases)
         logger.info(f"Saved {len(test_cases)} test cases for evaluation run")
 
-        # Retrieve context for each question
-        test_data = []
-        for test_case in test_cases:
-            logger.debug(f"Retrieving context for question: {test_case.question[:50]}...")
+        # Retrieve context for each question (with controlled parallelism)
+        # Extract model name from evaluation config for dynamic context window optimization
+        model_name = evaluation_config.llm_model if evaluation_config else None
 
-            context = await self._context_retrieval.retrieve_context(
-                query_text=test_case.question,
-                collection_id=collection_id,
-                top_k=5,
-                use_hybrid=True
-            )
-
-            retrieved_context = "\n\n".join([
-                f"[Chunk {i+1}]\n{chunk.content}"
-                for i, chunk in enumerate(context.chunks)
-            ])
-
-            test_data.append({
-                "test_case_id": test_case.id,
-                "question": test_case.question,
-                "category": test_case.category,
-                "retrieved_context": retrieved_context,
-                "ground_truth": test_case.ground_truth
-            })
+        test_data = await self._retrieve_context_parallel(
+            test_cases=test_cases,
+            collection_id=collection_id,
+            concurrency=self._concurrency,
+            model_name=model_name
+        )
 
         logger.info(f"Retrieved context for {len(test_data)} custom questions")
 
@@ -205,6 +194,71 @@ class StartPluginEvaluationUseCase:
             "evaluation_run_id": evaluation_run.id,
             "test_data": test_data
         }
+
+    async def _retrieve_context_parallel(
+        self,
+        test_cases: List[TestCase],
+        collection_id: str,
+        concurrency: int,
+        model_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve context for multiple test cases with controlled parallelism.
+
+        Args:
+            test_cases: List of test cases to retrieve context for
+            collection_id: Collection to search in
+            concurrency: Maximum number of parallel requests
+            model_name: Optional model name for dynamic context window optimization
+
+        Returns:
+            List of test data dictionaries with retrieved context
+        """
+        # Create semaphore to limit concurrent requests
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def retrieve_one(test_case: TestCase) -> Dict[str, Any]:
+            """Retrieve context for a single test case"""
+            async with semaphore:
+                logger.debug(f"Retrieving context for question: {test_case.question[:50]}...")
+
+                try:
+                    context = await self._context_retrieval.retrieve_context(
+                        query_text=test_case.question,
+                        collection_id=collection_id,
+                        top_k=5,
+                        use_hybrid=True,
+                        model_name=model_name  # Enable dynamic context window optimization
+                    )
+
+                    retrieved_context = "\n\n".join([
+                        f"[Chunk {i+1}]\n{chunk.content}"
+                        for i, chunk in enumerate(context.chunks)
+                    ])
+
+                    return {
+                        "test_case_id": test_case.id,
+                        "question": test_case.question,
+                        "category": test_case.category,
+                        "retrieved_context": retrieved_context,
+                        "ground_truth": test_case.ground_truth
+                    }
+                except Exception as e:
+                    logger.error(f"Failed to retrieve context for question '{test_case.question[:50]}': {e}")
+                    # Return empty context on error to allow evaluation to continue
+                    return {
+                        "test_case_id": test_case.id,
+                        "question": test_case.question,
+                        "category": test_case.category,
+                        "retrieved_context": f"[Error retrieving context: {str(e)}]",
+                        "ground_truth": test_case.ground_truth
+                    }
+
+        # Execute all retrievals with controlled concurrency
+        logger.info(f"Retrieving context for {len(test_cases)} questions with concurrency={concurrency}")
+        results = await asyncio.gather(*[retrieve_one(tc) for tc in test_cases])
+
+        return results
 
     def _load_test_cases(self) -> List[TestCase]:
         """Load test cases from JSON file"""
