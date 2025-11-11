@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any, List, Optional, Literal
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Response
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from ...api.deps import (
     get_run_evaluation_use_case,
@@ -439,7 +439,6 @@ class ModelInfo(BaseModel):
     id: str
     provider: Literal["ollama", "openai", "anthropic"]
     name: str
-    isStreaming: bool
 
 
 class PersonaInfo(BaseModel):
@@ -453,7 +452,7 @@ class TestCaseItemState(BaseModel):
     """Test case item in saved state"""
     test_case_id: str
     question: str
-    expected_answer: str
+    expected_answer: Optional[str] = None
     retrieved_context: str
     metadata: Optional[Dict[str, Any]] = None
 
@@ -477,7 +476,8 @@ class SaveStateRequest(BaseModel):
     current_batch: List[BatchItemState]
     last_updated: str  # ISO 8601 timestamp
 
-    @validator('user_id')
+    @field_validator('user_id')
+    @classmethod
     def validate_user_id(cls, v):
         if v and not re.match(r'^[0-9a-f]{32}$', v):
             raise ValueError('user_id must be a 32-character hex string')
