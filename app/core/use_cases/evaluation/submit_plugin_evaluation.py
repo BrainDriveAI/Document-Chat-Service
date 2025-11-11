@@ -137,14 +137,16 @@ class SubmitPluginEvaluationUseCase:
 
             logger.debug(f"Judged test case {test_case_id}: {'CORRECT' if judge_output.correct else 'INCORRECT'}")
 
-        # Update evaluation run
-        evaluation_run.evaluated_count = len(evaluated_ids_set) + processed_count
-        evaluation_run.correct_count += correct_count
-        evaluation_run.incorrect_count += incorrect_count
+        # Re-query all results to get accurate counts (handles concurrent submissions)
+        # Multiple background tasks might be processing batches simultaneously
+        all_results = await self._evaluation_repo.find_results_by_run_id(evaluation_run_id)
+        evaluation_run.evaluated_count = len(all_results)
+        evaluation_run.correct_count = sum(1 for r in all_results if r.judge_correct)
+        evaluation_run.incorrect_count = sum(1 for r in all_results if not r.judge_correct)
 
         logger.info(
             f"Updated evaluation run {evaluation_run_id}: "
-            f"evaluated_count={evaluation_run.evaluated_count}, "
+            f"evaluated_count={evaluation_run.evaluated_count} (re-queried), "
             f"total_questions={evaluation_run.total_questions}, "
             f"is_completed={evaluation_run.is_completed}, "
             f"status={evaluation_run.status.value}"
@@ -308,14 +310,16 @@ class SubmitPluginEvaluationUseCase:
 
             logger.debug(f"Judged test case {test_case_id}: {'CORRECT' if judge_output.correct else 'INCORRECT'}")
 
-        # Update evaluation run
-        evaluation_run.evaluated_count = len(evaluated_ids_set) + processed_count
-        evaluation_run.correct_count += correct_count
-        evaluation_run.incorrect_count += incorrect_count
+        # Re-query all results to get accurate counts (handles concurrent submissions)
+        # Multiple background tasks might be processing batches simultaneously
+        all_results = await self._evaluation_repo.find_results_by_run_id(evaluation_run_id)
+        evaluation_run.evaluated_count = len(all_results)
+        evaluation_run.correct_count = sum(1 for r in all_results if r.judge_correct)
+        evaluation_run.incorrect_count = sum(1 for r in all_results if not r.judge_correct)
 
         logger.info(
             f"Updated evaluation run {evaluation_run_id}: "
-            f"evaluated_count={evaluation_run.evaluated_count}, "
+            f"evaluated_count={evaluation_run.evaluated_count} (re-queried), "
             f"total_questions={evaluation_run.total_questions}, "
             f"is_completed={evaluation_run.is_completed}, "
             f"status={evaluation_run.status.value}"
