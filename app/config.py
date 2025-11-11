@@ -183,6 +183,50 @@ class AppSettings(BaseSettings):
         description="Embedding concurrency.",
     )
 
+    # Evaluation performance settings
+    EVALUATION_CONCURRENCY: Optional[int] = Field(
+        default=2,
+        env="EVALUATION_CONCURRENCY",
+        description="Number of parallel context retrieval requests during evaluation (1-8)."
+    )
+
+    # RAG Optimization Settings
+    DEFAULT_CONTEXT_WINDOW: int = Field(
+        default=4096,
+        env="DEFAULT_CONTEXT_WINDOW",
+        description="Default context window for models where detection fails (tokens)."
+    )
+
+    CONTEXT_SAFETY_MARGIN: float = Field(
+        default=0.75,
+        env="CONTEXT_SAFETY_MARGIN",
+        description="Use only this fraction of context window (0.75 = 75%)."
+    )
+
+    REVERSE_CONTEXT_FOR_OLLAMA: bool = Field(
+        default=True,
+        env="REVERSE_CONTEXT_FOR_OLLAMA",
+        description="Place most relevant chunks last (Ollama strips from top)."
+    )
+
+    MIN_TOP_K: int = Field(
+        default=2,
+        env="MIN_TOP_K",
+        description="Minimum number of chunks to retrieve."
+    )
+
+    MAX_TOP_K: int = Field(
+        default=10,
+        env="MAX_TOP_K",
+        description="Maximum number of chunks to retrieve."
+    )
+
+    AVG_CHUNK_TOKENS: int = Field(
+        default=200,
+        env="AVG_CHUNK_TOKENS",
+        description="Expected average tokens per chunk for budget calculation."
+    )
+
     # Vector store (Chroma)
     CHROMA_PERSIST_DIR: str = Field("./data/vector_db", env="CHROMA_PERSIST_DIR")
     CHROMA_COLLECTION_NAME: str = Field("documents", env="CHROMA_COLLECTION_NAME")
