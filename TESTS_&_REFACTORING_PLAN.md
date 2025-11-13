@@ -8,15 +8,15 @@
 
 ## Phase 1: Test Infrastructure Setup
 
-- [ ] Add test dependencies to `pyproject.toml` (pytest-asyncio, pytest-cov, pytest-mock)
-- [ ] Create `pytest.ini` with async support, coverage config
-- [ ] Create `tests/conftest.py` with shared fixtures
-  - [ ] Mock repositories (document, collection, chat, evaluation)
-  - [ ] Mock services (embedding, LLM, vector store, BM25)
-  - [ ] FastAPI TestClient fixture
-  - [ ] Async SQLite in-memory database fixture
+- [x] Add test dependencies to `pyproject.toml` (pytest-asyncio, pytest-cov, pytest-mock)
+- [x] Create `pytest.ini` with async support, coverage config
+- [x] Create `tests/conftest.py` with shared fixtures
+  - [x] Mock repositories (document, collection, chat, evaluation)
+  - [x] Mock services (embedding, LLM, vector store, BM25)
+  - [x] FastAPI TestClient fixture
+  - [x] Async SQLite in-memory database fixture
 - [ ] Run `poetry install` to install test dependencies
-- [ ] Create `.github/workflows/tests.yml` (GitHub Actions CI)
+- [x] Create `.github/workflows/tests.yml` (GitHub Actions CI)
 
 ---
 
