@@ -1,6 +1,7 @@
 # app/core/use_cases/search_documents.py
 
 import asyncio
+import logging
 from typing import List, Optional, Dict
 from ..domain.entities.document_chunk import DocumentChunk
 from ..domain.entities.query_transformation import QueryTransformationMethod
@@ -12,6 +13,8 @@ from ..ports.rank_fusion_service import RankFusionService
 from .query_transformation import QueryTransformationUseCase
 from .intent_classification import IntentClassificationUseCase, IntentKind
 from .collection_summary import CollectionSummaryUseCase
+
+logger = logging.getLogger(__name__)
 
 
 class SearchDocumentsUseCase:
@@ -120,9 +123,9 @@ class SearchDocumentsUseCase:
                 chat_history=chat_history,
                 max_history_turns=max_history_turns
             )
-        
-        print(f"Transformed queries ({len(transformed_queries)}): {transformed_queries}")
-        
+
+        logger.debug(f"Transformed queries ({len(transformed_queries)}): {transformed_queries}")
+
         # Step 3: Execute Retrieval
         if use_hybrid:
             chunks = await self._hybrid_search(
@@ -163,10 +166,10 @@ class SearchDocumentsUseCase:
         
         all_vector_results = []
         all_bm25_results = []
-        
+
         for query in queries:
-            print(f"Executing hybrid search for: {query}")
-            
+            logger.debug(f"Executing hybrid search for: {query}")
+
             # Generate query embedding
             query_embedding_task = self.embedding_service.generate_embedding(query)
             
@@ -217,10 +220,10 @@ class SearchDocumentsUseCase:
         """Execute vector-only search for multiple queries"""
         
         all_vector_results = []
-        
+
         for query in queries:
-            print(f"Executing vector search for: {query}")
-            
+            logger.debug(f"Executing vector search for: {query}")
+
             # Generate embedding and search
             query_embedding = await self.embedding_service.generate_embedding(query)
             vector_results = await self.vector_store.search_similar(

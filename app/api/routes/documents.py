@@ -15,7 +15,6 @@ from ...api.deps import (
     get_storage_service,
 )
 
-from ...core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
 from ...core.use_cases.document_management import DocumentManagementUseCase
 from ...core.ports.vector_store import VectorStore
 from ...core.ports.storage_service import StorageService
@@ -71,17 +70,6 @@ def to_document_response(doc: DomainDocument) -> DocumentResponse:
     )
 
 
-# def determine_document_type(filename: str) -> DocumentType:
-#     ext = Path(filename).suffix.lower().lstrip(".")
-#     if ext == "pdf":
-#         return DocumentType.PDF
-#     elif ext == "docx":
-#         return DocumentType.DOCX
-#     elif ext == "doc":
-#         return DocumentType.DOC
-#     else:
-#         raise InvalidDocumentTypeError(f"Unsupported file extension: {ext}")
-
 def determine_document_type(filename: str) -> DocumentType:
     """
     Determine document type from file extension.
@@ -110,7 +98,7 @@ def determine_document_type(filename: str) -> DocumentType:
     
     return ext_mapping[ext]
 
-async def process_document_background(doc_use_case: SimplifiedDocumentProcessingUseCase, document: DomainDocument):
+async def process_document_background(doc_use_case: DocumentManagementUseCase, document: DomainDocument):
     """
     Background task to process document.
     """
@@ -138,7 +126,7 @@ async def upload_document(
         collection_id: str = Form(...),
         document_repo: SQLiteDocumentRepository = Depends(get_document_repository),
         collection_repo: SQLiteCollectionRepository = Depends(get_collection_repository),
-        doc_use_case: SimplifiedDocumentProcessingUseCase = Depends(get_document_processing_use_case),
+        doc_use_case: DocumentManagementUseCase = Depends(get_document_processing_use_case),
         vector_store=Depends(get_vector_store),
         storage_service: StorageService = Depends(get_storage_service),
 ):
@@ -170,18 +158,7 @@ async def upload_document(
     # saved_filename = f"{new_id}{ext}"
     # saved_path = collection_dir / saved_filename
 
-    # try:
-    #     # Write file
-    #     with open(saved_path, "wb") as out_file:
-    #         shutil.copyfileobj(file.file, out_file)
-    #     logger.info(f"File saved to: {saved_path}")
-    # except Exception as e:
-    #     logger.error(f"Failed to save file: {e}")
-    #     raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
-    # finally:
-    #     file.file.close()
-
-    # 3. Save file using storage service
+    # Save file using storage service
     try:
         saved_path = await storage_service.save_file(
             file_content=file.file,

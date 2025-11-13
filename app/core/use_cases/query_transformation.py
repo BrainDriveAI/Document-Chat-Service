@@ -1,10 +1,13 @@
 # app/core/use_cases/query_transformation.py
 
 import re
+import logging
 from typing import List, Optional, Dict, Set
 from ..ports.llm_service import LLMService
 from ..domain.entities.query_transformation import QueryTransformationMethod
 from ..domain.exceptions import DomainException
+
+logger = logging.getLogger(__name__)
 
 
 class QueryTransformationError(DomainException):
@@ -91,7 +94,7 @@ class QueryTransformationUseCase:
             
         except Exception as e:
             # Fallback to original query on error
-            print(f"Query transformation error: {e}")
+            logger.error(f"Query transformation error: {e}")
             return [query]
     
     def _needs_contextualization(self, query: str) -> bool:
@@ -168,7 +171,7 @@ class QueryTransformationUseCase:
             return contextualized
             
         except Exception as e:
-            print(f"Contextualization error: {e}")
+            logger.error(f"Contextualization error: {e}")
             return query
     
     async def _generate_multi_queries(self, query: str, num_queries: int = 3) -> List[str]:
@@ -213,7 +216,7 @@ class QueryTransformationUseCase:
             return queries[:num_queries]
             
         except Exception as e:
-            print(f"Multi-query generation error: {e}")
+            logger.error(f"Multi-query generation error: {e}")
             return []
     
     async def _generate_hyde_query(self, query: str) -> str:
@@ -256,7 +259,7 @@ class QueryTransformationUseCase:
             return hypothetical_doc
             
         except Exception as e:
-            print(f"HyDE generation error: {e}")
+            logger.error(f"HyDE generation error: {e}")
             return query
     
     def _format_chat_history(self, chat_history: List[Dict]) -> str:

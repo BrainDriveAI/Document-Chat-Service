@@ -88,9 +88,8 @@ async def metrics():
 @app.on_event("startup")
 async def on_startup():
     logger.info("Application startup: instantiating adapters...")
+    logger.debug(f"Settings: {settings}")
     os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
-
-    print(f"Setting: {settings}")
 
     # Log configuration for debugging
     logger.info(f"Embedding configuration:")
@@ -241,10 +240,10 @@ async def on_startup():
         logger.info("Initializing test collection...")
 
         from .core.use_cases.evaluation.initialize_test_collection import InitializeTestCollectionUseCase
-        from .core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
+        from .core.use_cases.document_management import DocumentManagementUseCase
 
         # Create document processing use case for test collection initialization
-        doc_processing_use_case = SimplifiedDocumentProcessingUseCase(
+        doc_processing_use_case = DocumentManagementUseCase(
             document_repo=document_repo,
             collection_repo=collection_repo,
             document_processor=app.state.document_processor,

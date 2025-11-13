@@ -9,7 +9,7 @@ from ...domain.entities.document import Document, DocumentType
 from ...domain.entities.evaluation import TestCase
 from ...domain.exceptions import EvaluationInitializationError, TestCaseLoadError
 from ...ports.repositories import CollectionRepository, DocumentRepository
-from ..simple_document import SimplifiedDocumentProcessingUseCase
+from ..document_management import DocumentManagementUseCase as DocumentManagementUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class InitializeTestCollectionUseCase:
         self,
         collection_repo: CollectionRepository,
         document_repo: DocumentRepository,
-        document_processing_use_case: SimplifiedDocumentProcessingUseCase,
+        document_processing_use_case: DocumentManagementUseCase,
         test_collection_id: str,
         test_collection_name: str,
         test_docs_dir: str

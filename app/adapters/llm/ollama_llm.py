@@ -1,8 +1,11 @@
 import httpx
 import json
+import logging
 from typing import Dict, Any, Optional, AsyncGenerator
 from ...core.ports.llm_service import LLMService
 from ...core.domain.exceptions import DomainException
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaLLMError(DomainException):
@@ -149,7 +152,7 @@ Question:"""
             3. Third query
         """
         response = await self.generate_response(prompt)
-        print(f"MULTI QUERIES LLM RESPONSE: {response}")
+        logger.debug(f"Multi-query LLM response: {response}")
         queries = [line.strip().split(". ", 1)[1] for line in response.split("\n") if line.strip()]
         queries.append(query)
         return queries

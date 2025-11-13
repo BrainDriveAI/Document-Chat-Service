@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional, List
 from datetime import datetime, UTC
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -9,6 +10,8 @@ from ...core.ports.evaluation_repository import EvaluationRepository
 from ...core.ports.evaluation_state_repository import EvaluationStateRepository
 from ...core.domain.entities.evaluation import EvaluationRun, EvaluationResult, EvaluationStatus, TestCase
 from ...core.domain.entities.evaluation_state import EvaluationState
+
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
@@ -113,7 +116,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
             await conn.execute(
                 text("ALTER TABLE evaluation_runs ADD COLUMN evaluated_count INTEGER NOT NULL DEFAULT 0")
             )
-            print("Migration: Added evaluated_count column to evaluation_runs table")
+            logger.info("Migration: Added evaluated_count column to evaluation_runs table")
 
     async def _migrate_add_user_id(self, conn):
         """Migration: Add user_id column to evaluation_runs table"""
@@ -134,7 +137,7 @@ class SQLiteEvaluationRepository(EvaluationRepository):
             await conn.execute(
                 text("CREATE INDEX IF NOT EXISTS idx_evaluation_runs_user_id ON evaluation_runs(user_id)")
             )
-            print("Migration: Added user_id column to evaluation_runs table")
+            logger.info("Migration: Added user_id column to evaluation_runs table")
 
     async def save_run(self, evaluation_run: EvaluationRun) -> EvaluationRun:
         """Save or update an evaluation run"""

@@ -258,9 +258,9 @@ class ContextRetrievalUseCase:
                 chat_history=chat_history,
                 max_history_turns=max_history_turns
             )
-        
-        print(f"Transformed queries ({len(transformed_queries)}): {transformed_queries}")
-        
+
+        logger.debug(f"Transformed queries ({len(transformed_queries)}): {transformed_queries}")
+
         # Step 2: Execute Retrieval
         if use_hybrid:
             chunks = await self._hybrid_search(
@@ -318,10 +318,10 @@ class ContextRetrievalUseCase:
         
         all_vector_results = []
         all_bm25_results = []
-        
+
         for query in queries:
-            print(f"Executing hybrid search for: {query}")
-            
+            logger.debug(f"Executing hybrid search for: {query}")
+
             # Generate query embedding
             query_embedding_task = self.embedding_service.generate_embedding(query)
             
@@ -372,10 +372,10 @@ class ContextRetrievalUseCase:
         """Execute vector-only search for multiple queries"""
         
         all_vector_results = []
-        
+
         for query in queries:
-            print(f"Executing vector search for: {query}")
-            
+            logger.debug(f"Executing vector search for: {query}")
+
             # Generate embedding and search
             query_embedding = await self.embedding_service.generate_embedding(query)
             vector_results = await self.vector_store.search_similar(

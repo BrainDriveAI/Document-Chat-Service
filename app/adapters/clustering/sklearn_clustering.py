@@ -1,9 +1,12 @@
 from sklearn.cluster import KMeans
 import numpy as np
 import random
+import logging
 from typing import List
 from app.core.ports.clustering_service import ClusteringService
 from app.core.domain.entities.document_chunk import DocumentChunk
+
+logger = logging.getLogger(__name__)
 
 
 class SklearnClusteringAdapter(ClusteringService):
@@ -56,7 +59,7 @@ class SklearnClusteringAdapter(ClusteringService):
             
         except Exception as e:
             # Ultimate fallback: random sample
-            print(f"Clustering failed, using random sampling: {e}")
+            logger.warning(f"Clustering failed, using random sampling: {e}")
             return self._random_sample(chunks_with_embeddings, k)
     
     def _cluster_and_sample(
@@ -92,7 +95,7 @@ class SklearnClusteringAdapter(ClusteringService):
             return sampled_chunks
             
         except Exception as e:
-            print(f"K-means clustering failed: {e}")
+            logger.warning(f"K-means clustering failed: {e}")
             # Fallback to random from valid chunks
             return self._random_sample(valid_chunks, k)
     
