@@ -21,10 +21,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.domain.entities.chat import ChatMessage, ChatSession
 from app.core.domain.entities.collection import Collection
-from app.core.domain.entities.document import Document, DocumentChunk, StructuredElement
-from app.core.domain.entities.embedding import Embedding
-from app.core.domain.entities.evaluation import EvaluationResult, EvaluationRun
-from app.core.domain.value_objects.search_intent import SearchIntent
+from app.core.domain.entities.document import Document
+from app.core.domain.entities.document_chunk import DocumentChunk
+from app.core.domain.entities.structured_element import StructuredElement
+from app.core.domain.entities.evaluation import EvaluationRun
+from app.core.domain.value_objects.embedding import EmbeddingVector
 from app.core.ports.bm25_service import BM25Service
 from app.core.ports.embedding_service import EmbeddingService
 from app.core.ports.llm_service import LLMService
@@ -55,21 +56,30 @@ def sample_collection() -> Collection:
         id="collection-123",
         name="Test Collection",
         description="A test collection",
+        color="#3B82F6",
         created_at=datetime(2024, 1, 1, 12, 0, 0),
+        updated_at=datetime(2024, 1, 1, 12, 0, 0),
+        document_count=0
     )
 
 
 @pytest.fixture
 def sample_document(sample_collection: Collection) -> Document:
     """Sample document entity."""
+    from app.core.domain.entities.document import DocumentStatus, DocumentType
     return Document(
         id="doc-456",
         filename="test_document.pdf",
-        collection_id=sample_collection.id,
+        original_filename="original_test.pdf",
         file_path="/data/uploads/test_document.pdf",
         file_size=1024,
-        status="completed",
+        document_type=DocumentType.PDF,
+        collection_id=sample_collection.id,
+        status=DocumentStatus.PROCESSED,
         created_at=datetime(2024, 1, 1, 12, 0, 0),
+        processed_at=datetime(2024, 1, 1, 12, 5, 0),
+        metadata={},
+        chunk_count=10
     )
 
 
@@ -78,22 +88,22 @@ def sample_structured_elements() -> List[StructuredElement]:
     """Sample structured elements from document processor."""
     return [
         StructuredElement(
-            type="heading",
             content="Introduction",
+            element_type="heading",
             level=1,
             page_number=1,
             bbox=None,
         ),
         StructuredElement(
-            type="paragraph",
             content="This is the first paragraph of the document.",
+            element_type="paragraph",
             level=None,
             page_number=1,
             bbox=None,
         ),
         StructuredElement(
-            type="paragraph",
             content="This is the second paragraph with more content.",
+            element_type="paragraph",
             level=None,
             page_number=1,
             bbox=None,
@@ -111,8 +121,10 @@ def sample_chunks(sample_document: Document) -> List[DocumentChunk]:
             collection_id=sample_document.collection_id,
             content="This is the first chunk of text.",
             chunk_index=0,
+            chunk_type="paragraph",
+            parent_chunk_id=None,
             metadata={"page": 1, "heading": "Introduction"},
-            context=None,
+            embedding_vector=None,
         ),
         DocumentChunk(
             id="chunk-2",
@@ -120,18 +132,20 @@ def sample_chunks(sample_document: Document) -> List[DocumentChunk]:
             collection_id=sample_document.collection_id,
             content="This is the second chunk of text.",
             chunk_index=1,
+            chunk_type="paragraph",
+            parent_chunk_id=None,
             metadata={"page": 1, "heading": "Introduction"},
-            context=None,
+            embedding_vector=None,
         ),
     ]
 
 
 @pytest.fixture
-def sample_embeddings() -> List[Embedding]:
+def sample_embeddings() -> List[EmbeddingVector]:
     """Sample embedding vectors."""
     return [
-        Embedding(values=[0.1, 0.2, 0.3, 0.4, 0.5]),
-        Embedding(values=[0.6, 0.7, 0.8, 0.9, 1.0]),
+        EmbeddingVector(values=[0.1, 0.2, 0.3, 0.4, 0.5], model_name="test-model", dimensions=5),
+        EmbeddingVector(values=[0.6, 0.7, 0.8, 0.9, 1.0], model_name="test-model", dimensions=5),
     ]
 
 
@@ -191,13 +205,13 @@ def mock_embedding_service() -> EmbeddingService:
     service = AsyncMock(spec=EmbeddingService)
 
     # Default behavior: return dummy embeddings
-    async def generate_embedding(text: str) -> Embedding:
+    async def generate_embedding(text: str) -> EmbeddingVector:
         # Generate deterministic embedding based on text length
         dim = 5  # Small dimension for testing
         values = [float(i + len(text) % 10) / 10 for i in range(dim)]
-        return Embedding(values=values)
+        return EmbeddingVector(values=values, model_name="test-model", dimensions=dim)
 
-    async def generate_embeddings_batch(texts: List[str]) -> List[Embedding]:
+    async def generate_embeddings_batch(texts: List[str]) -> List[EmbeddingVector]:
         return [await generate_embedding(text) for text in texts]
 
     service.generate_embedding.side_effect = generate_embedding
@@ -232,11 +246,11 @@ def mock_vector_store() -> VectorStore:
     # In-memory storage for testing
     stored_chunks = []
 
-    async def add_chunks(chunks: List[DocumentChunk], embeddings: List[Embedding], **kwargs):
+    async def add_chunks(chunks: List[DocumentChunk], embeddings: List[EmbeddingVector], **kwargs):
         for chunk, embedding in zip(chunks, embeddings):
             stored_chunks.append((chunk, embedding))
 
-    async def search(query_embedding: Embedding, collection_id: str = None, top_k: int = 5, **kwargs):
+    async def search(query_embedding: EmbeddingVector, collection_id: str = None, top_k: int = 5, **kwargs):
         # Return stored chunks (simplified)
         results = [(chunk, 0.9 - i * 0.1) for i, (chunk, _) in enumerate(stored_chunks[:top_k])]
         return results

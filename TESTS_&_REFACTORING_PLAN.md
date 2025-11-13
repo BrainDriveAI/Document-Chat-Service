@@ -15,24 +15,26 @@
   - [x] Mock services (embedding, LLM, vector store, BM25)
   - [x] FastAPI TestClient fixture
   - [x] Async SQLite in-memory database fixture
-- [ ] Run `poetry install` to install test dependencies
+- [x] Run `poetry install` to install test dependencies
 - [x] Create `.github/workflows/tests.yml` (GitHub Actions CI)
 
 ---
 
 ## Phase 2: Domain Layer Tests (`tests/unit/domain/`)
 
-- [ ] `test_entities.py` - Test Document, DocumentChunk, Collection, ChatSession, ChatMessage
-  - [ ] Test factory methods
-  - [ ] Test validation logic
-  - [ ] Test entity state transitions
-- [ ] `test_value_objects.py` - Test Embedding, SearchQuery, QueryTransformationMethod
-  - [ ] Test `__post_init__` validation
-  - [ ] Test immutability
-- [ ] `test_evaluation_entities.py` - Test EvaluationRun, EvaluationResult
-  - [ ] Test progress calculations
-  - [ ] Test state management
-- [ ] `test_exceptions.py` - Test custom domain exceptions
+- [x] `test_entities.py` - Test Document, DocumentChunk, Collection, ChatSession, ChatMessage (22 tests)
+  - [x] Test factory methods
+  - [x] Test validation logic
+  - [x] Test entity state transitions
+- [x] `test_value_objects.py` - Test EmbeddingVector, SearchQuery (10 tests)
+  - [x] Test `__post_init__` validation
+  - [x] Test immutability
+- [x] `test_evaluation_entities.py` - Test EvaluationRun, TestCase (17 tests)
+  - [x] Test progress calculations
+  - [x] Test state management
+- [x] `test_exceptions.py` - Test custom domain exceptions (23 tests)
+
+**Total: 72 tests - ALL PASSING ✅**
 
 ---
 
