@@ -273,11 +273,31 @@ def mock_bm25_service() -> BM25Service:
     """Mock BM25 service."""
     service = AsyncMock()
 
-    async def search(query: str, collection_id: str = None, top_k: int = 5):
-        # Return dummy results
+    async def search(query_text: str, collection_id: str = None, top_k: int = 5, filters=None):
+        # Return dummy chunk results (not tuples)
         return [
-            ("chunk-1", 2.5),
-            ("chunk-2", 2.0),
+            DocumentChunk(
+                id="chunk-1",
+                document_id="doc-1",
+                collection_id=collection_id or "default",
+                content="BM25 result 1",
+                chunk_index=0,
+                chunk_type="paragraph",
+                parent_chunk_id=None,
+                metadata={"bm25_score": 2.5},
+                embedding_vector=None
+            ),
+            DocumentChunk(
+                id="chunk-2",
+                document_id="doc-1",
+                collection_id=collection_id or "default",
+                content="BM25 result 2",
+                chunk_index=1,
+                chunk_type="paragraph",
+                parent_chunk_id=None,
+                metadata={"bm25_score": 2.0},
+                embedding_vector=None
+            ),
         ]
 
     async def index_chunks(chunks: List[DocumentChunk]):
@@ -293,25 +313,26 @@ def mock_bm25_service() -> BM25Service:
 @pytest.fixture
 def mock_rank_fusion_service() -> RankFusionService:
     """Mock rank fusion service."""
-    service = Mock(spec=RankFusionService)
+    service = Mock()
 
-    def fuse_results(vector_results: List, bm25_results: List, alpha: float = 0.5):
-        # Simple fusion: combine and deduplicate
+    def fuse_results(vector_results: List[DocumentChunk], bm25_results: List[DocumentChunk],
+                     alpha: float = 0.5, top_k: int = 10, **kwargs):
+        # Simple fusion: combine and deduplicate by chunk ID
         all_chunk_ids = set()
         fused = []
 
-        for chunk, score in vector_results:
+        for chunk in vector_results:
             if chunk.id not in all_chunk_ids:
                 all_chunk_ids.add(chunk.id)
-                fused.append((chunk, score * alpha))
+                fused.append(chunk)
 
-        for chunk_id, score in bm25_results:
-            if chunk_id not in all_chunk_ids:
-                all_chunk_ids.add(chunk_id)
-                # Find chunk by id (simplified)
-                fused.append((chunk_id, score * (1 - alpha)))
+        for chunk in bm25_results:
+            if chunk.id not in all_chunk_ids:
+                all_chunk_ids.add(chunk.id)
+                fused.append(chunk)
 
-        return sorted(fused, key=lambda x: x[1], reverse=True)
+        # Return top_k chunks
+        return fused[:top_k]
 
     service.fuse_results.side_effect = fuse_results
 
