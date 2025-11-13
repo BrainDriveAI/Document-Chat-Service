@@ -202,7 +202,7 @@ def sample_evaluation_run(sample_collection: Collection) -> EvaluationRun:
 @pytest.fixture
 def mock_embedding_service() -> EmbeddingService:
     """Mock embedding service."""
-    service = AsyncMock(spec=EmbeddingService)
+    service = AsyncMock()
 
     # Default behavior: return dummy embeddings
     async def generate_embedding(text: str) -> EmbeddingVector:
@@ -223,7 +223,7 @@ def mock_embedding_service() -> EmbeddingService:
 @pytest.fixture
 def mock_llm_service() -> LLMService:
     """Mock LLM service."""
-    service = AsyncMock(spec=LLMService)
+    service = AsyncMock()
 
     # Default behavior: return canned responses
     async def generate_response(prompt: str, **kwargs) -> str:
@@ -241,23 +241,24 @@ def mock_llm_service() -> LLMService:
 @pytest.fixture
 def mock_vector_store() -> VectorStore:
     """Mock vector store."""
-    store = AsyncMock(spec=VectorStore)
+    store = AsyncMock()
 
     # In-memory storage for testing
     stored_chunks = []
 
-    async def add_chunks(chunks: List[DocumentChunk], embeddings: List[EmbeddingVector], **kwargs):
-        for chunk, embedding in zip(chunks, embeddings):
-            stored_chunks.append((chunk, embedding))
+    async def add_chunks(chunks: List[DocumentChunk], **kwargs):
+        # Store chunks (embedding_vector is already in the chunk)
+        for chunk in chunks:
+            stored_chunks.append(chunk)
 
     async def search(query_embedding: EmbeddingVector, collection_id: str = None, top_k: int = 5, **kwargs):
         # Return stored chunks (simplified)
-        results = [(chunk, 0.9 - i * 0.1) for i, (chunk, _) in enumerate(stored_chunks[:top_k])]
+        results = [(chunk, 0.9 - i * 0.1) for i, chunk in enumerate(stored_chunks[:top_k])]
         return results
 
     async def delete_by_document(document_id: str):
         nonlocal stored_chunks
-        stored_chunks = [(c, e) for c, e in stored_chunks if c.document_id != document_id]
+        stored_chunks = [c for c in stored_chunks if c.document_id != document_id]
 
     store.add_chunks.side_effect = add_chunks
     store.search.side_effect = search
@@ -270,7 +271,7 @@ def mock_vector_store() -> VectorStore:
 @pytest.fixture
 def mock_bm25_service() -> BM25Service:
     """Mock BM25 service."""
-    service = AsyncMock(spec=BM25Service)
+    service = AsyncMock()
 
     async def search(query: str, collection_id: str = None, top_k: int = 5):
         # Return dummy results
@@ -279,7 +280,12 @@ def mock_bm25_service() -> BM25Service:
             ("chunk-2", 2.0),
         ]
 
+    async def index_chunks(chunks: List[DocumentChunk]):
+        # Mock indexing - return success
+        return True
+
     service.search.side_effect = search
+    service.index_chunks.side_effect = index_chunks
 
     return service
 
