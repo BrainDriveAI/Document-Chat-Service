@@ -38,6 +38,7 @@ class TestOllamaModelInfoAdapter:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_ollama
     async def test_detect_gemma3_context_window(self, adapter):
         """Test context window detection for local gemma3:1b model"""
         model_name = "gemma3:1b"
@@ -50,6 +51,7 @@ class TestOllamaModelInfoAdapter:
         print(f"✓ Detected {model_name} context window: {context_window} tokens")
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_ollama
     async def test_get_model_info_full(self, adapter):
         """Test full model info retrieval for gemma3:1b"""
         model_name = "gemma3:1b"
@@ -98,6 +100,7 @@ class TestOllamaModelInfoAdapter:
         print(f"✓ Fallback working: {model_name} → {context_window} (default)")
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_ollama
     async def test_list_all_local_models(self, adapter):
         """Test listing all locally available Ollama models"""
         models = await adapter.get_all_local_models()
@@ -113,6 +116,7 @@ class TestOllamaModelInfoAdapter:
         assert len(gemma_models) > 0, "Should find gemma3:1b in local models"
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_ollama
     async def test_refresh_cache(self, adapter):
         """Test cache refresh functionality"""
         model_name = "gemma3:1b"
