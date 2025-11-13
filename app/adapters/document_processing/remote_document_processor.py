@@ -114,11 +114,11 @@ class RemoteDocumentProcessor(DocumentProcessor):
                         f"{self.api_base_url}/upload",
                         data=form_data
                     ) as response:
-                        print(f"Response status: {response}")
+                        self.logger.debug(f"Response status: {response}")
                         if response.status == 200:
                             response_data = await response.json()
                             self.logger.info(f"Successfully called remote API for document {document.id}")
-                            print(f"Response data: {response_data}")
+                            self.logger.debug(f"Response data: {response_data}")
                             return response_data
                         else:
                             error_text = await response.text()

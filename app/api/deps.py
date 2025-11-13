@@ -28,9 +28,8 @@ from ..core.ports.repositories import (
 from ..core.ports.model_info_service import ModelInfoService
 
 # Use-case classes
-from ..core.use_cases.document_management import DocumentManagementUseCase as SimplifiedDocumentProcessingUseCase
-from ..core.use_cases.collection_management import CollectionManagementUseCase
 from ..core.use_cases.document_management import DocumentManagementUseCase
+from ..core.use_cases.collection_management import CollectionManagementUseCase
 from ..core.use_cases.search_documents_u import SearchDocumentsUseCase
 from ..core.use_cases.chat_interaction import ChatInteractionUseCase
 from ..core.use_cases.query_transformation import QueryTransformationUseCase

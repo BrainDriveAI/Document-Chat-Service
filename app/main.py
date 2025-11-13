@@ -88,9 +88,8 @@ async def metrics():
 @app.on_event("startup")
 async def on_startup():
     logger.info("Application startup: instantiating adapters...")
+    logger.debug(f"Settings: {settings}")
     os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
-
-    print(f"Setting: {settings}")
 
     # Log configuration for debugging
     logger.info(f"Embedding configuration:")

@@ -1,5 +1,6 @@
 # app/api/routes/search.py
 
+import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -9,6 +10,8 @@ from ...core.use_cases.context_retrieval import ContextRetrievalUseCase
 from ...core.domain.entities.document_chunk import DocumentChunk
 from ...core.domain.entities.query_transformation import QueryTransformationMethod
 from ...core.domain.entities.search_intent import Intent
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -196,9 +199,7 @@ async def search_documents(
         
     except Exception as e:
         # Log the error
-        print(f"Search failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Search failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"

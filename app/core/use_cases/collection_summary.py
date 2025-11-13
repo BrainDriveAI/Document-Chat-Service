@@ -1,9 +1,12 @@
+import logging
 from typing import List, Optional
 from ..domain.entities.document_chunk import DocumentChunk
 from ..ports.vector_store import VectorStore
 from ..ports.llm_service import LLMService
 from ..ports.clustering_service import ClusteringService
 from ..domain.exceptions import CollectionSummaryError
+
+logger = logging.getLogger(__name__)
 
 
 class CollectionSummaryUseCase:
@@ -104,32 +107,32 @@ class CollectionSummaryUseCase:
         All fallback logic is handled by the clustering service adapter.
         """
         # 1. Get all chunks from collection (with embeddings)
-        print(f"Fetching chunks for collection: {collection_id}")
+        logger.debug(f"Fetching chunks for collection: {collection_id}")
         all_chunks = await self.vector_store.get_all_chunks_in_collection(
             collection_id=collection_id,
             limit=1000  # Reasonable limit to avoid memory issues
         )
-        
-        print(f"Retrieved {len(all_chunks) if all_chunks else 0} chunks from vector store")
-        
+
+        logger.debug(f"Retrieved {len(all_chunks) if all_chunks else 0} chunks from vector store")
+
         # 2. Check if we got any chunks
         if not all_chunks or len(all_chunks) == 0:
-            print("No chunks found in collection")
+            logger.debug("No chunks found in collection")
             return []
-        
+
         # 3. If we have fewer chunks than sample size, return all
         if len(all_chunks) <= sample_size:
-            print(f"Returning all {len(all_chunks)} chunks (less than sample_size)")
+            logger.debug(f"Returning all {len(all_chunks)} chunks (less than sample_size)")
             return all_chunks
-        
+
         # 4. Delegate to clustering service (handles all strategies and fallbacks)
-        print(f"Delegating to clustering service: {len(all_chunks)} chunks → {sample_size} representatives")
+        logger.debug(f"Delegating to clustering service: {len(all_chunks)} chunks → {sample_size} representatives")
         sampled_chunks = await self.clustering_service.get_diverse_representatives(
             chunks_with_embeddings=all_chunks,
             k=sample_size
         )
-        
-        print(f"Clustering service returned {len(sampled_chunks)} representative chunks")
+
+        logger.debug(f"Clustering service returned {len(sampled_chunks)} representative chunks")
         return sampled_chunks
     
     def _build_context(
