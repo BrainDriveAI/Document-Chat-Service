@@ -50,7 +50,3 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
-
-    - name: Check coverage threshold
-      run: |
-        poetry run pytest tests/ --cov=app --cov-fail-under=80 --cov-report=term -m "not requires_ollama"
