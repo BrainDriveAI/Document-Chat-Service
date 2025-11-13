@@ -166,8 +166,8 @@ def get_document_processing_use_case(
         llm_service: LLMService = Depends(get_llm_service),
         contextual_llm: LLMService = Depends(get_contextual_llm_service),
         bm25_service: BM25Service = Depends(get_bm25_service),
-) -> SimplifiedDocumentProcessingUseCase:
-    return SimplifiedDocumentProcessingUseCase(
+) -> DocumentManagementUseCase:
+    return DocumentManagementUseCase(
         document_repo=document_repo,
         collection_repo=collection_repo,
         document_processor=document_processor,
@@ -302,7 +302,7 @@ def get_judge_service(request: Request) -> JudgeService:
 def get_initialize_test_collection_use_case(
     collection_repo: CollectionRepository = Depends(get_collection_repository),
     document_repo: DocumentRepository = Depends(get_document_repository),
-    document_processing_use_case: SimplifiedDocumentProcessingUseCase = Depends(get_document_processing_use_case),
+    document_processing_use_case: DocumentManagementUseCase = Depends(get_document_processing_use_case),
 ) -> InitializeTestCollectionUseCase:
     """Get initialize test collection use case"""
     return InitializeTestCollectionUseCase(
