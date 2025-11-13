@@ -40,6 +40,8 @@
 
 ## Phase 3: Use Cases Tests (`tests/unit/use_cases/`)
 
+**Progress: 107 tests passing, 3 skipped (5 of 15 use cases complete)**
+
 ### Core Document Processing
 - [ ] `test_simplified_document_processing.py` (SimplifiedDocumentProcessingUseCase)
   - [ ] Test document processing pipeline (happy path)
@@ -57,10 +59,12 @@
   - [ ] Test dynamic context window detection
   - [ ] Test with/without chat history
 
-- [ ] `test_intent_classification.py` (IntentClassificationUseCase)
-  - [ ] Test regex-based classification (chat, summary, comparison, listing)
-  - [ ] Test LLM fallback classification
-  - [ ] Test clarification detection
+- [x] `test_intent_classification.py` (IntentClassificationUseCase) - **30 tests passing**
+  - [x] Test regex-based classification (chat, summary, comparison, listing)
+  - [x] Test LLM fallback classification
+  - [x] Test clarification detection
+  - [x] Test JSON parsing (clean, markdown, mixed text)
+  - [x] Test error handling and fallback behavior
 
 - [ ] `test_query_transformation.py` (QueryTransformationUseCase)
   - [ ] Test step-back query generation
@@ -85,10 +89,13 @@
   - [ ] Test with different sample sizes
 
 ### Chat
-- [ ] `test_chat_interaction.py` (ChatInteractionUseCase)
-  - [ ] Test create/delete chat sessions
-  - [ ] Test add/retrieve messages
-  - [ ] Test message history limits
+- [x] `test_chat_interaction.py` (ChatInteractionUseCase) - **20 tests passing**
+  - [x] Test create/delete chat sessions
+  - [x] Test add/retrieve messages
+  - [x] Test message history limits
+  - [x] Test process_message (orchestrator integration)
+  - [x] Test streaming messages with async generators
+  - [x] Test session stats updates
 
 ### Search
 - [ ] `test_search_documents.py` (SearchDocumentsUseCase)
