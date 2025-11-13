@@ -40,7 +40,7 @@
 
 ## Phase 3: Use Cases Tests (`tests/unit/use_cases/`)
 
-**Progress: 107 tests passing, 3 skipped (5 of 15 use cases complete)**
+**Progress: 162 tests passing, 3 skipped (7 of 15 use cases complete)**
 
 ### Core Document Processing
 - [ ] `test_simplified_document_processing.py` (SimplifiedDocumentProcessingUseCase)
@@ -66,11 +66,14 @@
   - [x] Test JSON parsing (clean, markdown, mixed text)
   - [x] Test error handling and fallback behavior
 
-- [ ] `test_query_transformation.py` (QueryTransformationUseCase)
-  - [ ] Test step-back query generation
-  - [ ] Test sub-query decomposition
-  - [ ] Test contextual query with chat history
-  - [ ] Test HyDE generation
+- [x] `test_query_transformation.py` (QueryTransformationUseCase) - **35 tests passing**
+  - [x] Test contextualization with chat history
+  - [x] Test multi-query generation (sub-query decomposition)
+  - [x] Test HyDE (Hypothetical Document Embeddings)
+  - [x] Test combined transformation methods
+  - [x] Test heuristics for context detection
+  - [x] Test LLM parameters (temperature control)
+  - [x] Test error handling and fallbacks
 
 ### Collection & Document Management
 - [ ] `test_collection_management.py` (CollectionManagementUseCase)
@@ -98,9 +101,15 @@
   - [x] Test session stats updates
 
 ### Search
-- [ ] `test_search_documents.py` (SearchDocumentsUseCase)
-  - [ ] Test search with filters
-  - [ ] Test hybrid vs vector-only search
+- [x] `test_search_documents.py` (SearchDocumentsUseCase) - **20 tests passing**
+  - [x] Test vector-only search
+  - [x] Test hybrid search (vector + BM25)
+  - [x] Test collection filtering
+  - [x] Test query transformation integration
+  - [x] Test result deduplication across queries
+  - [x] Test metadata filters
+  - [x] Test alpha parameter for rank fusion
+  - [x] Test error handling
 
 ### Evaluation (8 use cases)
 - [ ] `test_evaluation_management.py` (Start, Status, List, Results use cases)
