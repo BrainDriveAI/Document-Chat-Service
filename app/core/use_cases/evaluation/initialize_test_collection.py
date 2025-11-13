@@ -9,7 +9,7 @@ from ...domain.entities.document import Document, DocumentType
 from ...domain.entities.evaluation import TestCase
 from ...domain.exceptions import EvaluationInitializationError, TestCaseLoadError
 from ...ports.repositories import CollectionRepository, DocumentRepository
-from ..simple_document import SimplifiedDocumentProcessingUseCase
+from ..document_management import DocumentManagementUseCase as SimplifiedDocumentProcessingUseCase
 
 logger = logging.getLogger(__name__)
 

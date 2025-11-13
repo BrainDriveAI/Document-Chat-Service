@@ -1,5 +1,5 @@
 """
-Unit tests for SimplifiedDocumentProcessingUseCase.
+Unit tests for DocumentManagementUseCase.
 
 Tests cover:
 - Document processing pipeline (happy path)
@@ -13,7 +13,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import List
 
-from app.core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
+from app.core.use_cases.document_management import DocumentManagementUseCase
 from app.core.domain.entities.document import Document, DocumentStatus, DocumentType
 from app.core.domain.entities.document_chunk import DocumentChunk
 from app.core.domain.entities.structured_element import StructuredElement
@@ -55,8 +55,8 @@ def document_processing_use_case(
     mock_llm_service,
     mock_bm25_service
 ):
-    """Create SimplifiedDocumentProcessingUseCase with mocked dependencies."""
-    return SimplifiedDocumentProcessingUseCase(
+    """Create DocumentManagementUseCase with mocked dependencies."""
+    return DocumentManagementUseCase(
         document_repo=mock_document_repository,
         document_processor=mock_document_processor,
         embedding_service=mock_embedding_service,
@@ -167,7 +167,7 @@ class TestContextualRetrieval:
 
     @pytest.mark.skip(reason="TODO: Fix settings mock for contextual retrieval batch processing")
     @pytest.mark.asyncio
-    @patch('app.core.use_cases.simple_document.settings')
+    @patch('app.core.use_cases.document_management.settings')
     async def test_contextual_retrieval_enabled(
         self,
         mock_settings,
@@ -185,7 +185,7 @@ class TestContextualRetrieval:
         pass
 
     @pytest.mark.asyncio
-    @patch('app.core.use_cases.simple_document.settings')
+    @patch('app.core.use_cases.document_management.settings')
     async def test_contextual_retrieval_disabled(
         self,
         mock_settings,
@@ -205,7 +205,7 @@ class TestContextualRetrieval:
         assert document_processing_use_case.contextual_llm is None
 
     @pytest.mark.asyncio
-    @patch('app.core.use_cases.simple_document.settings')
+    @patch('app.core.use_cases.document_management.settings')
     async def test_contextual_retrieval_failure_continues_processing(
         self,
         mock_settings,
@@ -224,7 +224,7 @@ class TestContextualRetrieval:
         contextual_llm = AsyncMock()
         contextual_llm.generate_response.side_effect = Exception("LLM service unavailable")
 
-        use_case = SimplifiedDocumentProcessingUseCase(
+        use_case = DocumentManagementUseCase(
             document_repo=mock_document_repository,
             document_processor=mock_document_processor,
             embedding_service=mock_embedding_service,

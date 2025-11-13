@@ -15,8 +15,7 @@ from ...api.deps import (
     get_storage_service,
 )
 
-from ...core.use_cases.simple_document import SimplifiedDocumentProcessingUseCase
-from ...core.use_cases.document_management import DocumentManagementUseCase
+from ...core.use_cases.document_management import DocumentManagementUseCase as SimplifiedDocumentProcessingUseCase
 from ...core.ports.vector_store import VectorStore
 from ...core.ports.storage_service import StorageService
 from ...core.domain.entities.document import Document as DomainDocument, DocumentType
