@@ -293,12 +293,31 @@ For a production-ready setup with Nginx and Prometheus, use the provided `docker
 
 -----
 
-## Next Steps
+-----
 
-1.  Set up core domain entities and ports.
-2.  Implement Ollama adapters (LLM + Embeddings).
-3.  Create spaCy Layout document processor.
-4.  Build Chroma vector store adapter.
-5.  Implement LangGraph orchestrator.
-6.  Create FastAPI routes and controllers.
-7.  Add simple frontend interface.
+## For AI Coding Agents
+
+**Start here:** [`FOR-AI-CODING-AGENTS.md`](FOR-AI-CODING-AGENTS.md)
+
+Complete instructions for AI assistants (Claude Code, Cursor, Windsurf, Aider, Cline, etc.) including:
+- Architecture overview & development commands
+- **Compounding Engineering** - Auto-documentation system
+- Code patterns & conventions
+- 230 tests structure
+
+**Quick links:**
+- **Knowledge base:** `docs/AI-AGENT-GUIDE.md` - When/how to document (ADRs, failures, quirks)
+- **Decisions:** `docs/decisions/` - Architecture Decision Records
+- **Failures:** `docs/failures/` - Lessons learned (what NOT to do)
+- **Quirks:** `docs/data-quirks/` - Non-obvious system behaviors
+
+**Before implementing:** `grep -ri "keyword" docs/decisions/ docs/failures/ docs/data-quirks/`
+
+-----
+
+## Documentation
+
+- **[Owner's Manual](docs/OWNERS-MANUAL.md)** - Complete user/operator guide
+- **[Architecture](docs/braindrive_rag_system.md)** - Technical architecture deep-dive
+- **[Evaluation System](docs/evaluation-system.md)** - RAG accuracy testing
+- **[Performance Optimization](docs/OLLAMA_PERFORMANCE_OPTIMIZATION.md)** - Tuning guide

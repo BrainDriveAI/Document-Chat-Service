@@ -476,7 +476,7 @@ poetry run pytest tests/test_dynamic_context_window.py -v
 
 - [OLLAMA_PERFORMANCE_OPTIMIZATION.md](./OLLAMA_PERFORMANCE_OPTIMIZATION.md) - Hardware-specific tuning
 - [README.md](../README.md) - General setup and usage
-- [CLAUDE.md](../CLAUDE.md) - Architecture overview
+- [FOR-AI-CODING-AGENTS.md](../FOR-AI-CODING-AGENTS.md) - Architecture overview
 
 ## License
 

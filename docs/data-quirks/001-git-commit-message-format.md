@@ -118,7 +118,7 @@ git commit -m "docs: add comprehensive documentation system" -m "Add Owner's Man
 - Auto-documentation triggers
 - Search-before-implement workflow
 
-### 4. Enhanced CLAUDE.md
+### 4. Enhanced FOR-AI-CODING-AGENTS.md
 - Trigger conditions
 - Pre-commit checklist
 

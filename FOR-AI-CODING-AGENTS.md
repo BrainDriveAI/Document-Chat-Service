@@ -1,6 +1,6 @@
-# CLAUDE.md
+# FOR-AI-CODING-AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding assistants (Claude Code, Cursor, Windsurf, Aider, Cline, etc.) when working with code in this repository.
 
 ## Project Overview
 
@@ -45,17 +45,35 @@ docker-compose -f docker-compose.prod.yml up --build -d
 ```
 
 ### Testing
-Note: Test files are not yet implemented in this repository. When adding tests, use:
+**230 tests** covering domain entities, use cases, and integration scenarios.
+
 ```bash
-# Run tests with pytest
+# Run all tests (excluding Ollama integration tests)
+poetry run pytest -m "not requires_ollama"
+
+# Run all tests including Ollama integration (requires Ollama running locally)
 poetry run pytest
 
 # Run specific test file
-poetry run pytest tests/unit/test_use_cases/test_document_processing.py
+poetry run pytest tests/unit/use_cases/test_document_management.py
 
 # Run with coverage
 poetry run pytest --cov=app tests/
+
+# Run with verbose output
+poetry run pytest -v
 ```
+
+**Test structure:**
+- `tests/unit/domain/` - Domain entities, value objects, exceptions
+- `tests/unit/use_cases/` - Use case business logic
+- `tests/test_dynamic_context_window.py` - Context window detection
+
+**Integration test markers:**
+- `@pytest.mark.requires_ollama` - Tests requiring Ollama instance (4 tests)
+- Skipped in CI via `pytest -m "not requires_ollama"`
+
+**Current status:** 223 passing, 3 skipped, 4 deselected
 
 ----------------
 - In all interactions and commit messages, be extemely concise and sacrifice grammar for the sake of concision.
