@@ -1006,6 +1006,6 @@ A: Cosmetic logging issue (emojis). App works fine. Remove emojis from code if a
 
 **Need help?** Check troubleshooting section or open an issue on GitHub.
 
-**Want to contribute?** Read `CLAUDE.md` for development guidelines.
+**Want to contribute?** Read `FOR-AI-CODING-AGENTS.md` for development guidelines.
 
 **Ready to extend?** See "Extending the System" section and Clean Architecture guides.
