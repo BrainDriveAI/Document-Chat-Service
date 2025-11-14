@@ -18,12 +18,10 @@ data
 /upload_test.py
 /project_structure.py
 
-# AI
-CLAUDE.md
+# AI agent files (temporary, not for repo)
 .cursorrules
-TASKS.md
 .changeset/
 
-# Evaluation docs
-FRONTEND_EVALUATION_API_UPDATES.md
-evaludation_flow_summary_client_side.md
+# Temporary planning docs (not for repo)
+RAG_OPTIMIZATION_GUIDE.md
+TESTS_&_REFACTORING_PLAN.md
