@@ -21,7 +21,3 @@ data
 # AI agent files (temporary, not for repo)
 .cursorrules
 .changeset/
-
-# Temporary planning docs (not for repo)
-RAG_OPTIMIZATION_GUIDE.md
-TESTS_&_REFACTORING_PLAN.md
