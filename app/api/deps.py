@@ -184,20 +184,8 @@ def get_collection_management_use_case(
 ) -> CollectionManagementUseCase:
     return CollectionManagementUseCase(collection_repo=collection_repo)
 
-def get_document_management_use_case(
-        document_repo: DocumentRepository = Depends(get_document_repository),
-        vector_store: VectorStore = Depends(get_vector_store),
-        storage_service: StorageService = Depends(get_storage_service),
-        logger: Logger = Depends(get_document_logger),
-        collection_management_use_case: CollectionManagementUseCase = Depends(get_collection_management_use_case),
-) -> DocumentManagementUseCase:
-    return DocumentManagementUseCase(
-        document_repo=document_repo,
-        vector_store=vector_store,
-        storage_service=storage_service,
-        logger=logger,
-        collection_management_use_case=collection_management_use_case,
-    )
+# Alias for backwards compatibility - both names point to the same function
+get_document_management_use_case = get_document_processing_use_case
 
 
 def get_query_transformation_use_case(
