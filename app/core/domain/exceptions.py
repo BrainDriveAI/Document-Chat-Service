@@ -104,5 +104,6 @@ class JudgeServiceError(DomainException):
 
 class TestCaseLoadError(DomainException):
     """Raised when loading test cases from file fails"""
+    __test__ = False  # Tell pytest this is not a test class
     pass
 

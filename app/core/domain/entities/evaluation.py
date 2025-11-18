@@ -15,6 +15,8 @@ class EvaluationStatus(Enum):
 @dataclass
 class TestCase:
     """Domain entity representing a test case for evaluation"""
+    __test__ = False  # Tell pytest this is not a test class
+
     id: str
     question: str
     category: str
