@@ -221,7 +221,7 @@ async def get_document(
     Get document info and status by id.
     """
     try:
-        document = await document_use_case.get_document_by_id(document_id)
+        document = await document_use_case.get_document(document_id)
     except DocumentNotFoundError:
         raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
     except Exception as e:
@@ -238,7 +238,7 @@ async def list_documents(
     List documents, optionally filtered by collection_id.
     """
     try:
-        documents = await document_use_case.list_documents(collection_id)
+        documents = await document_use_case.list_documents_by_collection(collection_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list documents: {str(e)}")
     return [to_document_response(d) for d in documents]
